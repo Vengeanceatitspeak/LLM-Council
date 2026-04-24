@@ -1,0 +1,71 @@
+Hey bro, here's what I need from you to get everything working:
+
+=== NEED FROM YOU ===
+
+1. CLOUDFLARE API TOKEN (CRITICAL - can't do image gen without this)
+   - You gave me the Account ID: 8cb75e3ccc02647fff32bd6f3f9738c5 ✅
+   - But I also need a Cloudflare API TOKEN (different from account ID).
+   - Go to: https://dash.cloudflare.com/?to=/:account/ai/workers-ai
+   - Click "Use REST API" → "Create a Workers AI API Token"
+   - Copy that token and paste it in .env as CLOUDFLARE_API_TOKEN="your_token_here"
+   - Without this token, image generation WILL NOT work.
+
+2. THAT'S IT — Everything else I can handle with what you gave me.
+
+=== WHAT'S BEEN BUILT (Status) ===
+
+[✅ DONE] Feature 1: AI Image Generation (Cloudflare Workers AI)
+   - Using @cf/black-forest-labs/flux-1-schnell model (free tier, fast)
+   - Toggle switch in the input area (like Gemini's image mode)
+   - Golden dot indicator when image mode is active
+   - Images render inline in chat with download + enlarge options
+   - Shows generation time
+   - BLOCKED: Waiting for your Cloudflare API Token (see #1 above)
+
+[✅ DONE] Feature 2: Smart Document Upload + Memory
+   - Paperclip icon in input bar for file upload (PDF, images, text files)
+   - OCR via pytesseract for scanned docs/images
+   - PDF text extraction via PyPDF2
+   - File chips (Gemini-style) show filename, type icon, size
+   - Remove button on each chip before sending
+   - All uploads saved to conversation history for future recall
+   - Uploaded files auto-included as context in council deliberation
+
+[✅ DONE] Feature 3: Web Scraper + Google Search
+   - URL detection: paste any URL and it scrapes the full page
+   - Google search via DuckDuckGo (no API key needed, free)
+   - Built with BeautifulSoup4 + httpx
+   - Live indicators in chat: "Scraping 2 URLs..." / "Searching the web..."
+   - Shows completion time for scrape/search
+
+[✅ DONE] Feature 4: Rich Output Formatting
+   - Syntax-highlighted code blocks with copy-to-clipboard button
+   - Clean markdown tables with proper styling
+   - Bold text, bulleted/numbered lists, links, blockquotes
+   - Using react-syntax-highlighter + react-markdown + remark-gfm
+   - All 3 stages now use the rich renderer (was only plain markdown before)
+
+[✅ DONE] Feature 5: Token-based Usage Dashboard
+   - TWO progress bars in sidebar:
+     * Daily Prompts: X/50 remaining with percentage
+     * Token Budget: actual tokens from Groq API (not estimates)
+   - Color coding: green (<50%) → gold (50-80%) → red (>80%)
+   - Auto-resets at midnight UTC
+   - Disables input when limit hit
+
+[✅ DONE] Feature 6: Thinking Timer
+   - Live timer counts up while council is deliberating (100ms precision)
+   - Spinning clock icon during thinking, stops on completion
+   - Per-stage timing: S1: 12.3s | S2: 15.1s | S3: 5.2s | Total: 32.6s
+   - Per-stage token counts displayed in stage headers
+   - Total tokens shown in timing badge
+
+=== WHAT I FIXED ===
+- Fixed openrouter.py crash (was importing non-existent config vars)
+- Fixed SSE parser — was breaking on chunked data, now properly buffers
+- Groq client now captures ACTUAL token usage from API responses
+- Removed rough token estimates, replaced with real data
+
+=== ACTION NEEDED ===
+Just add your Cloudflare API Token to the .env file and you're good to go.
+Open .env and add: CLOUDFLARE_API_TOKEN="your_token_here"

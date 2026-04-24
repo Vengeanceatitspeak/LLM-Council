@@ -1,6 +1,7 @@
 """Groq API client for making LLM requests.
 
 Each council member has their own individual Groq API key.
+Now captures actual token usage from Groq API responses.
 """
 
 import asyncio
@@ -26,7 +27,7 @@ async def query_groq_model(
         timeout: Request timeout in seconds
 
     Returns:
-        Response dict with 'content' key, or None if failed
+        Response dict with 'content' and 'usage' keys, or None if failed
     """
     # Prepend system prompt if provided
     full_messages = []
@@ -44,7 +45,17 @@ async def query_groq_model(
         )
 
         content = response.choices[0].message.content
-        return {"content": content}
+
+        # Capture actual token usage from Groq response
+        usage_data = {}
+        if response.usage:
+            usage_data = {
+                "prompt_tokens": response.usage.prompt_tokens or 0,
+                "completion_tokens": response.usage.completion_tokens or 0,
+                "total_tokens": response.usage.total_tokens or 0,
+            }
+
+        return {"content": content, "usage": usage_data}
 
     except Exception as e:
         print(f"Error querying Groq model {model}: {e}")

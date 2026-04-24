@@ -7,9 +7,11 @@ Uses LangGraph StateGraph to build a multi-stage deliberation pipeline:
   4. CIO synthesizes final verdict with <THINKING> + <FINAL_VERDICT>
 
 All thinking is parsed and exposed to the frontend for transparency.
+Token usage is tracked from actual Groq API responses.
 """
 
 import re
+import time
 import asyncio
 from typing import List, Dict, Any, Tuple, Optional, TypedDict, Annotated
 from langgraph.graph import StateGraph, END
@@ -127,6 +129,7 @@ async def node_stage1_collect(state: CouncilState) -> dict:
         response = responses.get(member["id"])
         if response is not None and response.get("content"):
             parsed = parse_thinking_and_output(response["content"])
+            usage = response.get("usage", {})
             stage1_results.append({
                 "member_id": member["id"],
                 "model": member["model"],
@@ -135,6 +138,7 @@ async def node_stage1_collect(state: CouncilState) -> dict:
                 "thinking": parsed["thinking"],
                 "output": parsed["output"],
                 "response": response["content"],
+                "tokens": usage,
             })
 
     return {"stage1_results": stage1_results}
@@ -217,12 +221,14 @@ Now provide your evaluation and ranking:"""
         if response is not None and response.get("content"):
             full_text = response["content"]
             parsed = parse_ranking_from_text(full_text)
+            usage = response.get("usage", {})
             stage2_results.append({
                 "member_id": member["id"],
                 "model": member["model"],
                 "display_name": member["display_name"],
                 "ranking": full_text,
                 "parsed_ranking": parsed,
+                "tokens": usage,
             })
 
     # Calculate aggregate rankings
@@ -284,10 +290,12 @@ Be decisive. Your investors are paying for alpha, not hedged language."""
                 "thinking": "",
                 "output": "Error: Unable to generate final synthesis.",
                 "response": "Error: Unable to generate final synthesis.",
+                "tokens": {},
             }
         }
 
     parsed = parse_thinking_and_output(response["content"])
+    usage = response.get("usage", {})
 
     return {
         "stage3_result": {
@@ -296,6 +304,7 @@ Be decisive. Your investors are paying for alpha, not hedged language."""
             "thinking": parsed["thinking"],
             "output": parsed["output"],
             "response": response["content"],
+            "tokens": usage,
         }
     }
 
@@ -424,6 +433,7 @@ async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
             "thinking": "",
             "output": "All models failed to respond. Please try again.",
             "response": "All models failed to respond. Please try again.",
+            "tokens": {},
         }, {}
 
     metadata = {

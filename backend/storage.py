@@ -226,55 +226,73 @@ def _save_usage(usage: Dict[str, Any]):
         json.dump(usage, f, indent=2)
 
 
+# Daily token limit (Groq free tier: ~6000 req/day across keys, but token-limited)
+DAILY_TOKEN_LIMIT = 500000  # 500K tokens/day is a reasonable free tier budget
+
+
 def get_daily_usage() -> Dict[str, Any]:
     """
-    Get the current daily usage.
+    Get the current daily usage with both prompt count and token tracking.
 
     Returns:
-        Dict with 'used', 'limit', 'remaining', 'date', 'percentage'
+        Dict with prompt and token usage info
     """
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     usage = _load_usage()
 
     # Reset if it's a new day
     if usage.get("date") != today:
-        usage = {"date": today, "count": 0}
+        usage = {"date": today, "count": 0, "tokens_used": 0}
         _save_usage(usage)
 
     count = usage.get("count", 0)
+    tokens = usage.get("tokens_used", 0)
     return {
         "used": count,
         "limit": DAILY_CREDIT_LIMIT,
         "remaining": max(0, DAILY_CREDIT_LIMIT - count),
         "date": today,
-        "percentage": min(100, round((count / DAILY_CREDIT_LIMIT) * 100, 1))
+        "percentage": min(100, round((count / DAILY_CREDIT_LIMIT) * 100, 1)),
+        "tokens_used": tokens,
+        "tokens_limit": DAILY_TOKEN_LIMIT,
+        "tokens_remaining": max(0, DAILY_TOKEN_LIMIT - tokens),
+        "tokens_percentage": min(100, round((tokens / DAILY_TOKEN_LIMIT) * 100, 1)),
     }
 
 
-def increment_usage() -> Dict[str, Any]:
+def increment_usage(tokens: int = 0) -> Dict[str, Any]:
     """
-    Increment the daily usage counter.
+    Increment the daily usage counter and add tokens used.
+
+    Args:
+        tokens: Number of tokens used in this request
 
     Returns:
-        Updated usage dict (same format as get_daily_usage)
+        Updated usage dict
     """
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     usage = _load_usage()
 
     # Reset if it's a new day
     if usage.get("date") != today:
-        usage = {"date": today, "count": 0}
+        usage = {"date": today, "count": 0, "tokens_used": 0}
 
     usage["count"] = usage.get("count", 0) + 1
+    usage["tokens_used"] = usage.get("tokens_used", 0) + tokens
     _save_usage(usage)
 
     count = usage["count"]
+    tokens_total = usage["tokens_used"]
     return {
         "used": count,
         "limit": DAILY_CREDIT_LIMIT,
         "remaining": max(0, DAILY_CREDIT_LIMIT - count),
         "date": today,
-        "percentage": min(100, round((count / DAILY_CREDIT_LIMIT) * 100, 1))
+        "percentage": min(100, round((count / DAILY_CREDIT_LIMIT) * 100, 1)),
+        "tokens_used": tokens_total,
+        "tokens_limit": DAILY_TOKEN_LIMIT,
+        "tokens_remaining": max(0, DAILY_TOKEN_LIMIT - tokens_total),
+        "tokens_percentage": min(100, round((tokens_total / DAILY_TOKEN_LIMIT) * 100, 1)),
     }
 
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import MarkdownRenderer from './MarkdownRenderer';
 import './Stage2.css';
 
 function getDisplayName(model, rankings) {
@@ -17,7 +17,7 @@ function deAnonymizeText(text, labelToModel, allRankings) {
   return result;
 }
 
-export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
+export default function Stage2({ rankings, labelToModel, aggregateRankings, timing, tokens }) {
   const [activeTab, setActiveTab] = useState(0);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -46,6 +46,8 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
           <span className="stage-badge stage-badge-2">2</span>
           Peer Review &amp; Rankings
           <span className="stage-count">{rankings.length} reviewers</span>
+          {timing && <span className="stage-timing">{timing}s</span>}
+          {tokens > 0 && <span className="stage-tokens">{tokens >= 1000 ? `${(tokens / 1000).toFixed(1)}k` : tokens} tok</span>}
         </h3>
         <button className="collapse-btn">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -112,9 +114,9 @@ export default function Stage2({ rankings, labelToModel, aggregateRankings }) {
               {rankings[activeTab].display_name || rankings[activeTab].model}
             </div>
             <div className="ranking-content markdown-content">
-              <ReactMarkdown>
-                {deAnonymizeText(rankings[activeTab].ranking, labelToModel, rankings)}
-              </ReactMarkdown>
+              <MarkdownRenderer
+                content={deAnonymizeText(rankings[activeTab].ranking, labelToModel, rankings)}
+              />
             </div>
 
             {rankings[activeTab].parsed_ranking &&

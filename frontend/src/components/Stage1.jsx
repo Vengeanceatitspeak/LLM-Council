@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import MarkdownRenderer from './MarkdownRenderer';
 import './Stage1.css';
 
 function ThinkingBlock({ thinking }) {
@@ -31,7 +31,7 @@ function ThinkingBlock({ thinking }) {
   );
 }
 
-export default function Stage1({ responses }) {
+export default function Stage1({ responses, timing, tokens }) {
   const [activeTab, setActiveTab] = useState(0);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -46,6 +46,8 @@ export default function Stage1({ responses }) {
           <span className="stage-badge">1</span>
           Individual Model Analyses
           <span className="stage-count">{responses.length} models</span>
+          {timing && <span className="stage-timing">{timing}s</span>}
+          {tokens > 0 && <span className="stage-tokens">{tokens >= 1000 ? `${(tokens / 1000).toFixed(1)}k` : tokens} tok</span>}
         </h3>
         <button className="collapse-btn">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -87,15 +89,20 @@ export default function Stage1({ responses }) {
                 </span>
                 <span className="model-name">{responses[activeTab].model}</span>
               </div>
+              {responses[activeTab].tokens?.total_tokens > 0 && (
+                <span className="model-tokens">
+                  {responses[activeTab].tokens.total_tokens} tokens
+                </span>
+              )}
             </div>
 
             {/* Thinking Block — visible chain of thought */}
             <ThinkingBlock thinking={responses[activeTab].thinking} />
 
             <div className="response-text markdown-content">
-              <ReactMarkdown>
-                {responses[activeTab].output || responses[activeTab].response}
-              </ReactMarkdown>
+              <MarkdownRenderer
+                content={responses[activeTab].output || responses[activeTab].response}
+              />
             </div>
           </div>
         </div>

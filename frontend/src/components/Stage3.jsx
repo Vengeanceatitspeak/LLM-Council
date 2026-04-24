@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
+import MarkdownRenderer from './MarkdownRenderer';
 import './Stage3.css';
 
 function ThinkingBlock({ thinking }) {
@@ -31,7 +31,7 @@ function ThinkingBlock({ thinking }) {
   );
 }
 
-export default function Stage3({ finalResponse }) {
+export default function Stage3({ finalResponse, timing, tokens }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   if (!finalResponse) {
@@ -45,6 +45,8 @@ export default function Stage3({ finalResponse }) {
           <span className="stage-badge stage-badge-3">3</span>
           Chairman's Verdict
           <span className="cio-tag">FINAL</span>
+          {timing && <span className="stage-timing">{timing}s</span>}
+          {tokens > 0 && <span className="stage-tokens">{tokens >= 1000 ? `${(tokens / 1000).toFixed(1)}k` : tokens} tok</span>}
         </h3>
         <button className="collapse-btn">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
@@ -75,9 +77,9 @@ export default function Stage3({ finalResponse }) {
           <ThinkingBlock thinking={finalResponse.thinking} />
 
           <div className="final-text markdown-content">
-            <ReactMarkdown>
-              {finalResponse.output || finalResponse.response}
-            </ReactMarkdown>
+            <MarkdownRenderer
+              content={finalResponse.output || finalResponse.response}
+            />
           </div>
         </div>
       )}

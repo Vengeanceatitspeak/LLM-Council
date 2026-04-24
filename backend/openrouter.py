@@ -1,8 +1,15 @@
-"""OpenRouter API client for making LLM requests."""
+"""OpenRouter API client for making LLM requests.
+
+NOTE: This module is retained for backward compatibility but is NOT
+currently used — all LLM calls now go through Groq (see groq_client.py).
+"""
 
 import httpx
 from typing import List, Dict, Any, Optional
-from .config import OPENROUTER_API_KEY, OPENROUTER_API_URL
+
+# These are no longer used but kept to prevent import errors
+OPENROUTER_API_KEY = ""
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
 async def query_model(

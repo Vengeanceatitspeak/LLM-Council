@@ -1,188 +1,32 @@
-Building a multi-agent "Council" for finance and trading is a highly advanced and effective architecture. By separating concerns (risk, sentiment, quant analysis) and giving agents dedicated memory and "thinking" space, you create a robust system that mimics a real-world hedge fund committee.
-
-To achieve your goals—dynamic agent selection, central vs. agentic memory, verifiable logs, and a strict finance focus—we need a highly modular architecture.
-
-Below is the Master Blueprint, followed by the exact system prompts, and finally, the meta-prompt you can feed into "Anti Gravity" (or any coding/agentic framework you are using to build the backend).
-
-Part 1: The Meta-Prompt for "Anti Gravity" (System Architecture Build)
-Copy and paste this section into your development AI to generate the necessary code, backend routing, and memory structures.
-
-Plaintext
-[SYSTEM DIRECTIVE FOR ANTI GRAVITY / DEV AGENT]
-PROJECT: Financial Multi-Agent LLM Council ("The Syndicate")
-OBJECTIVE: Build a scalable, modular multi-agent orchestration system for financial trading and market analysis. 
-
-ARCHITECTURE REQUIREMENTS:
-1. Dynamic Orchestration: The system must have a "Chairman" (Central Router) that receives the user query, queries the Central Memory (Vector DB/RAG), and dynamically decides WHICH and HOW MANY of the available agents to spin up based on the task complexity.
-2. Template-Based Agents: DO NOT hardcode agent roles into the core logic. Use a base `Agent_System_Prompt` template. Roles, system constraints, and objectives will be injected at runtime via a JSON config of available roles.
-3. Dual-Tier Memory Callbacks:
-   - Central Memory: Global market history, past trade performance, and user constraints. Passed to the Chairman and appended as global context.
-   - Agentic Memory: Specialized memory local to the agent (e.g., the Quant agent remembers past statistical anomalies it found; the Risk agent remembers past drawdown warnings). 
-4. Observable Execution (Thinking Logs): Every agent MUST output their response in two parts: a strict `<THINKING>` block for internal logic/chain-of-thought, and an `<OUTPUT>` block for the final payload.
-5. Finance Fine-Tuning: All system prompts must heavily bias toward risk management (Sharpe ratio, max drawdown, position sizing), data-driven objectivity, and alpha generation.
-
-DELIVERABLES NEEDED FROM ANTI GRAVITY:
-- Python classes for the Orchestrator, BaseAgent, and MemoryManager.
-- Logic for dynamic tool calling and dynamic agent instantiation.
-- Callbacks to save agent outputs back into the respective Vector DB namespaces (Central vs. Local).
-Part 2: The Master Central Prompt (The "Chairman")
-This prompt runs the central orchestrator. It does not analyze data directly; its job is to retrieve central memory, select the right team members, dispatch tasks, and synthesize the final trading decision.
-
-System Prompt: Central Orchestrator
-
-Plaintext
-You are the Chairman of a high-tier Quantitative Hedge Fund Council. Your objective is to orchestrate a team of specialized AI agents to generate mathematically sound, risk-adjusted trading decisions and market analyses.
-
-[SYSTEM CAPABILITIES & CONSTRAINTS]
-- You do not make unilateral trading decisions. You delegate.
-- You have access to the Council Roster (a dynamic list of available agents).
-- You can activate between 1 and N agents depending on the complexity of the query. Do not waste resources on simple queries; do not under-resource complex macro queries.
-- Optimize for capital preservation first, alpha generation second.
-
-[MEMORY INJECTION]
-Central Memory Context: {central_memory_callback}
-Recent Council Decisions: {recent_history}
-
-[YOUR PROCESS]
-1. Receive the user/market query.
-2. Review the Central Memory Context.
-3. Select the required agents from the {available_agents_roster} to form a task force.
-4. Draft a specific sub-prompt/task for each selected agent.
-5. Await their responses, review their `<THINKING>` logs for logical fallacies, and synthesize their final outputs.
-6. Issue the final Council Verdict.
-
-[OUTPUT FORMAT]
-You must respond in the following strict structure:
-<COUNCIL_LOGS>
-- Query Analysis: [Your breakdown of the problem]
-- Memory Retrieval: [What past data is relevant?]
-- Agent Selection: [List agents chosen and WHY (e.g., "Activating Risk Manager and Quant for portfolio volatility check")]
-</COUNCIL_LOGS>
-
-<DISPATCH_ORDERS>
-[JSON format of tasks assigned to each selected agent]
-</DISPATCH_ORDERS>
-
-[Once agent responses are received, you will output:]
-<FINAL_VERDICT>
-- Consensus: [Buy/Sell/Hold/Wait]
-- Confidence Score: [0-100%]
-- Risk/Reward Ratio: [Calculated metric]
-- Synthesis: [Detailed justification combining agent insights]
-</FINAL_VERDICT>
-Part 3: The Individual Agent Template
-This is the core engine. You will use one system prompt template, and dynamically inject the specific role variables.
-
-System Prompt: Base Financial Agent
-
-Plaintext
-You are an elite financial specialist acting as a member of a Hedge Fund Council. 
-Your specific designation is: {ROLE_NAME}.
-
-[ROLE OBJECTIVE]
-{ROLE_OBJECTIVE}
-
-[ROLE CONSTRAINTS & METHODOLOGY]
-{ROLE_CONSTRAINTS}
-
-[MEMORY INJECTION]
-Global Council Context: {global_central_memory}
-Your Agentic Memory (Your past localized insights): {agent_local_memory}
-
-[INSTRUCTIONS]
-You will receive a specific task from the Council Chairman. You must execute this task through the lens of your specific role. Do not overlap into other domains (e.g., if you are the Risk Manager, do not predict price targets; focus strictly on downside exposure).
-- Base all calculations on probabilities, not certainties.
-- If data is missing or ambiguous, state your assumptions clearly.
-- Incorporate your localized Agentic Memory into your current analysis.
-
-[OUTPUT FORMAT]
-You MUST structure your response exactly as follows. The parsing engine relies on these tags.
-
-<THINKING>
-[Step-by-step scratchpad. Log your chain of thought, calculations, data parsing, and memory recall here. Be verbose, skeptical, and analytical. Show your work.]
-</THINKING>
-
-<AGENT_CONCLUSION>
-[Your final, concise, actionable deliverable to the Chairman based strictly on your thinking block. Provide metrics, probabilities, and definitive stances.]
-</AGENT_CONCLUSION>
-
-<MEMORY_UPDATE>
-[Summarize the key insight from this task in 1-2 sentences. This will be embedded and saved to your localized Agentic Memory for future callbacks.]
-</MEMORY_UPDATE>
-Part 4: The 10 Configurable Finance Roles
-To populate {ROLE_NAME}, {ROLE_OBJECTIVE}, and {ROLE_CONSTRAINTS} in the template above, pass these configurations dynamically. Note: You can use 2 of them or all 10 depending on the Chairman's dispatch.
-
-The Macro Economist
-
-Objective: Analyze global macroeconomic data (interest rates, inflation, geopolitics, central bank policies) to determine market regimes.
-
-Constraints: Ignore short-term price action. Focus on bond yields, currency strength, and systemic shifts.
-
-The Quantitative Analyst (Quant)
-
-Objective: Identify statistical anomalies, mean-reversion setups, momentum divergences, and correlations.
-
-Constraints: Rely entirely on math. Provide probabilities (e.g., "78% chance of mean reversion within 3 periods"). No emotional or news-based inputs.
-
-The Risk Manager (The "Brake Pedal")
-
-Objective: Protect capital. Calculate Value at Risk (VaR), beta exposure, position sizing, and invalidation points (stop-losses).
-
-Constraints: Assume the trade will go wrong. Find the worst-case scenario. Mandate strict risk-to-reward ratios (minimum 1:2).
-
-The Sentiment Analyst
-
-Objective: Gauge retail and institutional sentiment using news flow, options chain flow, put/call ratios, and social media velocity.
-
-Constraints: Differentiate between "noise" and actionable sentiment shifts. Look for extreme fear/greed indicating contrarian bottoms/tops.
-
-The Technical Analyst
-
-Objective: Analyze price charts, volume, liquidity pools, order block imbalances, and key support/resistance levels.
-
-Constraints: Focus strictly on price action and market structure. Define exact entry, take-profit, and stop-loss levels based on liquidity.
-
-The Fundamental Analyst
-
-Objective: Evaluate asset valuation. For equities: earnings, DCF models, debt-to-equity. For crypto: tokenomics, network activity, TVL.
-
-Constraints: Focus on intrinsic value. Highlight if an asset is overvalued or undervalued relative to its sector peers.
-
-The Regulatory & Compliance Officer
-
-Objective: Ensure proposed trades or strategies do not violate SEC, CFTC, or global financial regulations. Monitor for upcoming regulatory catalysts.
-
-Constraints: Flag any high-risk assets (e.g., unregistered securities). Act as a strict veto if legal risks are too high.
-
-The Options & Derivatives Strategist
-
-Objective: Design hedging strategies and identify volatility pricing inefficiencies (implied vs. realized volatility).
-
-Constraints: Think in "Greeks" (Delta, Gamma, Theta, Vega). Suggest structures (straddles, iron condors) rather than just directional delta-1 trades.
-
-The Market Maker / Execution Algo
-
-Objective: Determine the optimal way to enter and exit the market to minimize slippage and transaction costs.
-
-Constraints: Focus on order book depth, liquidity conditions, and TWAP/VWAP execution strategies.
-
-The Contrarian (The "Devil’s Advocate")
-
-Objective: Actively look for flaws in the prevailing Council thesis. Challenge consensus.
-
-Constraints: For every bullish point made by the team, find the bearish counter-argument. Prevent groupthink.
-
-How to Execute This in Practice
-When building this, your backend script should work as follows:
-
-User asks: "Should we short Tesla ahead of earnings given current inflation?"
-
-Chairman checks central memory, outputs: <DISPATCH_ORDERS> {"Macro Economist": "Assess inflation impact", "Sentiment Analyst": "Check TSLA options flow", "Risk Manager": "Define max drawdown for a short position"}
-
-System dynamically spins up those 3 agents using the Base Template.
-
-Agents read their localized memories, write their <THINKING> logs, and output their <AGENT_CONCLUSION>.
-
-Chairman reads the 3 conclusions and writes the <FINAL_VERDICT>.
-
-To ensure the framework scales exactly as you want, what tech stack or specific framework (e.g., LangChain, CrewAI, AutoGen, or custom Python) are you using to handle the routing and memory vector databases for "Anti Gravity"?
+Here is a detailed breakdown of the exact features you need to include in your LLM application based on your list:
+### 1. Integrated AI Image Generation using Cloudflare workers API (make a switch or option like gemeini nanbanan has it like you clci kthat then only image genartes and also like give normal answer with image and not just image )
+This feature allows users to generate images without leaving your chat interface.
+Cloudflare api id or account id is 8cb75e3ccc02647fff32bd6f3f9738c5
+here is teh documnetation : https://developers.cloudflare.com/api/
+ * **The Core Feature:** A toggle or specific command mode that switches the LLM from generating text to generating an image based on the user's prompt.
+ * **User Interface (UI):** A clear visual indicator (like an image icon or a checkbox) so the user knows they are requesting an image. It needs a loading state (e.g., a spinner or progress bar) since image generation takes a few seconds.
+ * **The Output:** The final image should render directly inside the chat window, ideally with options for the user to click to enlarge, download, or regenerate.
+### 2. Smart Document Upload & Historical Memory(upload option must be there and must be like perplexity or gemeini like UI or fomatting)
+This feature turns your LLM from a simple chatbot into a document analysis tool with a memory.
+ * **The Core Feature:** A file upload system (drag-and-drop or a paperclip icon) where users can attach images, PDFs, or text files to their prompt.
+ * **OCR text Extraction:** An invisible backend process that "reads" the uploaded files, specifically extracting text from images or scanned PDFs so the LLM can understand them.
+ * **Retention/Memory:** This is the most crucial part. The app needs to save these uploaded documents and the extracted text to the user's account history. This allows a user to log in a week later and ask, "What was the total on that invoice I uploaded last Tuesday?" without having to re-upload it.
+### 3. add a a really good web scraper (not just reading or summarizing ) any URL it should be able to get data from and also able to make google searches 
+This feature gives your LLM real-time internet access, preventing it from giving outdated answers.
+ * **The Core Feature:** When a user asks about current events, trending topics, or a specific URL, the app fetches live data before the LLM answers.
+ * **Web Scraper:** The ability to take a URL provided by the user, read the text on that specific webpage, and summarize or answer questions about it.
+ * **Social Media Scraper:** The ability to pull in live sentiment, recent posts, or discussions from platforms like Reddit or X (Twitter) based on a keyword. This allows the LLM to answer questions like, "What are people saying about the new Apple release today?"
+### 4. Rich Output Formatting (when needed only like if needed then only like if some data is represented better in table format then make table etc)
+This feature ensures the LLM's responses are highly readable and interactive, rather than just giant walls of plain text.
+ * **The Core Feature:** A display engine that translates the LLM's raw output into visually appealing, structured formats.
+ * **Code Blocks:** If the LLM writes code, it needs to be inside a dark-mode box with syntax highlighting (colors for different coding terms) and a one-click "Copy to Clipboard" button.
+ * **Markdown & Tables:** The ability to cleanly display bold text, bulleted lists, numbered steps, and perfectly aligned data tables.
+ * **Streaming Polish:** As the text generates in real-time (the typing effect), the formatting must stay locked in place and not glitch or jump around the screen.
+### 5. Daily Prompt Quota & Usage Dashboard I have used Groq API so i am providing documnetation read it and calulate token like wise
+This is the documnetation:
+https://console.groq.com/docs/overview
+and add a progress bar kind of thing so i know how much prompt or tokens i have left percnatge wise or any other good format
+This feature manages user expectations and protects your Groq API costs.
+ * **The Core Feature:** A tracker that limits how many times a user can hit "send" in a 24-hour period.
+ * **User Dashboard/Widget:** A clear, always-visible counter somewhere on the screen (e.g., "14 / 50 Prompts Remaining Today").
+ * **Enforcement & Reset:** Once the user hits zero, the text input box should disable or show a clear warning message ("Daily limit reached. Resets at midnight."). The system must automatically refresh this count every single day.

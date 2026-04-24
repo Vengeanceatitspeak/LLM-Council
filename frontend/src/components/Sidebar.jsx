@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import './Sidebar.css';
 
+function formatTokenCount(num) {
+  if (!num) return '0';
+  if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+  if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+  return String(num);
+}
+
 export default function Sidebar({
   conversations,
   currentConversationId,
@@ -66,6 +73,20 @@ export default function Sidebar({
     return 'linear-gradient(90deg, #d94452, #b8313e)';
   };
 
+  const getTokensColor = () => {
+    const pct = usage.tokens_percentage || 0;
+    if (pct < 50) return 'var(--accent-secondary)';
+    if (pct < 80) return 'var(--accent-gold)';
+    return 'var(--accent-red)';
+  };
+
+  const getTokensGradient = () => {
+    const pct = usage.tokens_percentage || 0;
+    if (pct < 50) return 'linear-gradient(90deg, #5b7def, #3a7bd5)';
+    if (pct < 80) return 'linear-gradient(90deg, #d4a843, #c4851c)';
+    return 'linear-gradient(90deg, #d94452, #b8313e)';
+  };
+
   return (
     <div className="sidebar">
       {/* Brand Header */}
@@ -97,28 +118,72 @@ export default function Sidebar({
         </button>
       </div>
 
-      {/* Credit Usage Bar */}
-      <div className="credit-section">
-        <div className="credit-header">
-          <span className="credit-label">Daily Allocation</span>
-          <span className="credit-count" style={{ color: getUsageColor() }}>
-            {usage.used}/{usage.limit}
-          </span>
+      {/* Usage Dashboard */}
+      <div className="usage-dashboard">
+        {/* Prompt Quota */}
+        <div className="usage-section">
+          <div className="usage-header">
+            <div className="usage-label-row">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
+              <span className="usage-label">Daily Prompts</span>
+            </div>
+            <span className="usage-count" style={{ color: getUsageColor() }}>
+              {usage.remaining}/{usage.limit}
+            </span>
+          </div>
+          <div className="usage-bar-track">
+            <div
+              className="usage-bar-fill"
+              style={{
+                width: `${usage.percentage}%`,
+                background: getUsageGradient(),
+              }}
+            />
+          </div>
+          <div className="usage-footer">
+            <span className="usage-pct" style={{ color: getUsageColor() }}>{usage.percentage}%</span>
+            <span className="usage-remaining-text">
+              {usage.remaining > 0
+                ? `${usage.remaining} remaining`
+                : 'Limit reached — resets midnight UTC'}
+            </span>
+          </div>
         </div>
-        <div className="credit-bar-track">
-          <div
-            className="credit-bar-fill"
-            style={{
-              width: `${usage.percentage}%`,
-              background: getUsageGradient(),
-            }}
-          />
+
+        {/* Token Usage */}
+        <div className="usage-section">
+          <div className="usage-header">
+            <div className="usage-label-row">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
+                <line x1="1" y1="10" x2="23" y2="10" />
+              </svg>
+              <span className="usage-label">Token Budget</span>
+            </div>
+            <span className="usage-count" style={{ color: getTokensColor() }}>
+              {formatTokenCount(usage.tokens_used)}/{formatTokenCount(usage.tokens_limit)}
+            </span>
+          </div>
+          <div className="usage-bar-track">
+            <div
+              className="usage-bar-fill"
+              style={{
+                width: `${usage.tokens_percentage || 0}%`,
+                background: getTokensGradient(),
+              }}
+            />
+          </div>
+          <div className="usage-footer">
+            <span className="usage-pct" style={{ color: getTokensColor() }}>{usage.tokens_percentage || 0}%</span>
+            <span className="usage-remaining-text">
+              {(usage.tokens_remaining || 0) > 0
+                ? `${formatTokenCount(usage.tokens_remaining)} tokens left`
+                : 'Token budget exhausted'}
+            </span>
+          </div>
         </div>
-        <span className="credit-remaining">
-          {usage.remaining > 0
-            ? `${usage.remaining} queries remaining`
-            : 'Daily limit reached — resets at midnight UTC'}
-        </span>
       </div>
 
       {/* Conversation List */}
