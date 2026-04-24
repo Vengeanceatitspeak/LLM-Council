@@ -1,0 +1,73 @@
+/* ─── MakeMeRichGPT — Stage 3 (CIO Verdict) ───────────────────────────────── */
+
+.stage3 {
+  border-color: rgba(0, 212, 170, 0.2);
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.04), var(--bg-card));
+}
+
+.stage3-header {
+  border-bottom: 1px solid rgba(0, 212, 170, 0.1);
+}
+
+.stage-badge-3 {
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+}
+
+.cio-tag {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--accent-green);
+  background: var(--accent-green-dim);
+  padding: 2px 8px;
+  border-radius: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.stage3-body {
+  padding: 16px;
+}
+
+/* CIO Badge */
+.cio-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, rgba(0, 212, 170, 0.08), rgba(124, 58, 237, 0.06));
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 212, 170, 0.15);
+}
+
+.cio-icon {
+  font-size: 24px;
+}
+
+.cio-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.cio-role {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent-green);
+}
+
+.cio-model {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Final Text */
+.final-text {
+  color: var(--text-primary);
+  line-height: 1.7;
+}
+
+.final-text .markdown-content {
+  font-size: 14.5px;
+}
