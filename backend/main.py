@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import uuid
 import json
-# import asyncio
+import asyncio
 
 from . import storage
 from .council import (
@@ -18,7 +18,7 @@ from .council import (
     stage3_synthesize_final,
     calculate_aggregate_rankings,
 )
-from .config import COUNCIL_ROLES, CHAIRMAN_MODEL, COUNCIL_MODELS
+from .config import COUNCIL_MEMBERS, CHAIRMAN_MODEL
 
 app = FastAPI(title="MakeMeRichGPT API")
 
@@ -75,22 +75,20 @@ async def root():
 
 @app.get("/api/council/members")
 async def get_council_members():
-    """Get info about all council members and their roles."""
+    """Get info about all council members."""
     members = []
-    for model in COUNCIL_MODELS:
-        role_info = COUNCIL_ROLES.get(model, {})
+    for member in COUNCIL_MEMBERS:
         members.append({
-            "model": model,
-            "role": role_info.get("role", "Analyst"),
-            "icon": role_info.get("icon", "💼"),
-            "color": role_info.get("color", "#888"),
+            "id": member["id"],
+            "model": member["model"],
+            "display_name": member["display_name"],
+            "color": member["color"],
         })
     return {
         "members": members,
         "chairman": {
             "model": CHAIRMAN_MODEL,
-            "role": "Chief Investment Officer",
-            "icon": "👔",
+            "display_name": "Chairman",
         },
         "total": len(members),
     }
@@ -183,7 +181,7 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
         title = await generate_conversation_title(request.content)
         storage.update_conversation_title(conversation_id, title)
 
-    # Run the 3-stage council process
+    # Run the 3-stage council process via LangGraph
     stage1_results, stage2_results, stage3_result, metadata = await run_full_council(
         request.content
     )

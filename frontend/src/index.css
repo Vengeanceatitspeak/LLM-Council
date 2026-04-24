@@ -1,4 +1,7 @@
 /* ─── MakeMeRichGPT — Global Design System ─────────────────────────────────── */
+/* Professional Finance Terminal Theme — No emojis, Bloomberg-inspired */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   /* Typography */
@@ -10,55 +13,62 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Color Palette — Dark Finance Theme */
-  --bg-primary: #08090d;
-  --bg-secondary: #0e1017;
-  --bg-tertiary: #13141c;
-  --bg-card: #161822;
-  --bg-card-hover: #1a1d2b;
-  --bg-elevated: #1e2133;
-  --bg-input: #12131b;
+  /* Color Palette — Institutional Dark Finance */
+  --bg-primary: #06080c;
+  --bg-secondary: #0b0e14;
+  --bg-tertiary: #10141c;
+  --bg-card: #131720;
+  --bg-card-hover: #181d28;
+  --bg-elevated: #1c2230;
+  --bg-input: #0e1118;
 
   /* Borders */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.1);
-  --border-hover: rgba(255, 255, 255, 0.15);
-  --border-focus: rgba(0, 212, 170, 0.5);
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-default: rgba(255, 255, 255, 0.08);
+  --border-hover: rgba(255, 255, 255, 0.12);
+  --border-focus: rgba(0, 200, 150, 0.5);
 
   /* Text */
-  --text-primary: #e8eaed;
-  --text-secondary: #9aa0ab;
-  --text-tertiary: #6b7280;
-  --text-inverse: #08090d;
+  --text-primary: #e2e5ea;
+  --text-secondary: #8b92a0;
+  --text-tertiary: #575e6e;
+  --text-inverse: #06080c;
 
-  /* Accents */
-  --accent-green: #00d4aa;
-  --accent-green-dim: rgba(0, 212, 170, 0.15);
-  --accent-green-glow: rgba(0, 212, 170, 0.3);
-  --accent-purple: #7c3aed;
-  --accent-purple-dim: rgba(124, 58, 237, 0.15);
-  --accent-gold: #f59e0b;
-  --accent-red: #ef4444;
-  --accent-red-dim: rgba(239, 68, 68, 0.15);
-  --accent-blue: #3b82f6;
+  /* Accents — Institutional Finance Palette */
+  --accent-primary: #00c896;
+  --accent-primary-dim: rgba(0, 200, 150, 0.12);
+  --accent-primary-glow: rgba(0, 200, 150, 0.25);
+  --accent-secondary: #5b7def;
+  --accent-secondary-dim: rgba(91, 125, 239, 0.12);
+  --accent-gold: #d4a843;
+  --accent-gold-dim: rgba(212, 168, 67, 0.12);
+  --accent-red: #d94452;
+  --accent-red-dim: rgba(217, 68, 82, 0.12);
+  --accent-blue: #3a7bd5;
+  --accent-amber: #c4851c;
+
+  /* Thinking blocks */
+  --thinking-bg: rgba(91, 125, 239, 0.06);
+  --thinking-border: rgba(91, 125, 239, 0.15);
+  --thinking-text: #8b9bc4;
 
   /* Gradients */
-  --gradient-green: linear-gradient(135deg, #00d4aa, #00b894);
-  --gradient-accent: linear-gradient(135deg, #00d4aa, #7c3aed);
-  --gradient-gold: linear-gradient(135deg, #f59e0b, #f97316);
-  --gradient-card: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  --gradient-primary: linear-gradient(135deg, #00c896, #009e7a);
+  --gradient-accent: linear-gradient(135deg, #00c896, #5b7def);
+  --gradient-gold: linear-gradient(135deg, #d4a843, #c4851c);
+  --gradient-card: linear-gradient(135deg, rgba(255,255,255,0.02), rgba(255,255,255,0.005));
 
   /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(0, 212, 170, 0.15);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --shadow-glow: 0 0 20px rgba(0, 200, 150, 0.1);
 
   /* Spacing */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 
   /* Transitions */
   --transition-fast: 150ms ease;
@@ -88,7 +98,7 @@ body {
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -96,26 +106,27 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 /* Selection */
 ::selection {
-  background: var(--accent-green-dim);
-  color: var(--accent-green);
+  background: var(--accent-primary-dim);
+  color: var(--accent-primary);
 }
 
-/* ─── Global Markdown Styling (Dark Theme) ─────────────────────────────────── */
+/* ─── Global Markdown Styling ──────────────────────────────────────────────── */
 
 .markdown-content {
   padding: 12px;
-  font-size: 14.5px;
-  line-height: 1.7;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--text-secondary);
 }
 
 .markdown-content p {
@@ -168,10 +179,10 @@ body {
 .markdown-content code {
   background: var(--bg-primary);
   padding: 2px 7px;
-  border-radius: 4px;
+  border-radius: 3px;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.88em;
-  color: var(--accent-green);
+  font-size: 0.85em;
+  color: var(--accent-primary);
 }
 
 .markdown-content pre code {
@@ -183,7 +194,7 @@ body {
 .markdown-content blockquote {
   margin: 0 0 12px 0;
   padding-left: 16px;
-  border-left: 3px solid var(--accent-green);
+  border-left: 2px solid var(--accent-secondary);
   color: var(--text-secondary);
 }
 
@@ -193,7 +204,7 @@ body {
 }
 
 .markdown-content a {
-  color: var(--accent-green);
+  color: var(--accent-primary);
   text-decoration: none;
 }
 
@@ -212,11 +223,16 @@ body {
   padding: 8px 12px;
   border: 1px solid var(--border-subtle);
   text-align: left;
+  font-size: 13px;
 }
 
 .markdown-content th {
   background: var(--bg-elevated);
   font-weight: 600;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
 }
 
 .markdown-content hr {
@@ -225,20 +241,94 @@ body {
   margin: 16px 0;
 }
 
+/* ─── Thinking Block Styles ────────────────────────────────────────────────── */
+
+.thinking-block {
+  margin: 0 0 12px 0;
+  border: 1px solid var(--thinking-border);
+  border-radius: var(--radius-md);
+  background: var(--thinking-bg);
+  overflow: hidden;
+  transition: all var(--transition-default);
+}
+
+.thinking-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.thinking-header:hover {
+  background: rgba(91, 125, 239, 0.08);
+}
+
+.thinking-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.thinking-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent-secondary);
+  opacity: 0.8;
+}
+
+.thinking-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.thinking-toggle {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  transition: all var(--transition-fast);
+}
+
+.thinking-toggle:hover {
+  color: var(--accent-secondary);
+  background: rgba(91, 125, 239, 0.1);
+}
+
+.thinking-content {
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--thinking-border);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--thinking-text);
+  font-family: 'JetBrains Mono', monospace;
+  white-space: pre-wrap;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
 /* ─── Utility Animations ───────────────────────────────────────────────────── */
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-16px); }
+  from { opacity: 0; transform: translateX(-12px); }
   to { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes slideInRight {
-  from { opacity: 0; transform: translateX(16px); }
+  from { opacity: 0; transform: translateX(12px); }
   to { opacity: 1; transform: translateX(0); }
 }
 
@@ -252,12 +342,17 @@ body {
   100% { background-position: 200% center; }
 }
 
-@keyframes glow {
-  0%, 100% { box-shadow: 0 0 5px rgba(0, 212, 170, 0.2); }
-  50% { box-shadow: 0 0 20px rgba(0, 212, 170, 0.4); }
+@keyframes subtleGlow {
+  0%, 100% { box-shadow: 0 0 4px rgba(0, 200, 150, 0.1); }
+  50% { box-shadow: 0 0 12px rgba(0, 200, 150, 0.2); }
 }
 
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+@keyframes tickerScroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }

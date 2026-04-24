@@ -1,32 +1,33 @@
-/* ─── MakeMeRichGPT — Stage 3 (CIO Verdict) ───────────────────────────────── */
+/* ─── MakeMeRichGPT — Stage 3 (Chairman's Verdict) ─────────────────────────── */
 
 .stage3 {
-  border-color: rgba(0, 212, 170, 0.2);
-  background: linear-gradient(135deg, rgba(0, 212, 170, 0.04), var(--bg-card));
+  border-color: rgba(0, 200, 150, 0.15);
+  background: linear-gradient(135deg, rgba(0, 200, 150, 0.03), var(--bg-card));
 }
 
 .stage3-header {
-  border-bottom: 1px solid rgba(0, 212, 170, 0.1);
+  border-bottom: 1px solid rgba(0, 200, 150, 0.08);
 }
 
 .stage-badge-3 {
-  background: var(--accent-green-dim);
-  color: var(--accent-green);
+  background: var(--accent-primary-dim);
+  color: var(--accent-primary);
 }
 
 .cio-tag {
   font-size: 9px;
   font-weight: 700;
-  color: var(--accent-green);
-  background: var(--accent-green-dim);
+  color: var(--accent-primary);
+  background: var(--accent-primary-dim);
   padding: 2px 8px;
-  border-radius: 10px;
-  letter-spacing: 1px;
+  border-radius: 3px;
+  letter-spacing: 1.2px;
   text-transform: uppercase;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .stage3-body {
-  padding: 16px;
+  padding: 14px;
 }
 
 /* CIO Badge */
@@ -34,15 +35,16 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 16px;
-  padding: 10px 14px;
-  background: linear-gradient(135deg, rgba(0, 212, 170, 0.08), rgba(124, 58, 237, 0.06));
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, rgba(0, 200, 150, 0.06), rgba(91, 125, 239, 0.04));
   border-radius: var(--radius-md);
-  border: 1px solid rgba(0, 212, 170, 0.15);
+  border: 1px solid rgba(0, 200, 150, 0.1);
 }
 
 .cio-icon {
-  font-size: 24px;
+  color: var(--accent-primary);
+  flex-shrink: 0;
 }
 
 .cio-info {
@@ -51,13 +53,13 @@
 }
 
 .cio-role {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
-  color: var(--accent-green);
+  color: var(--accent-primary);
 }
 
 .cio-model {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--text-tertiary);
   font-family: 'JetBrains Mono', monospace;
 }
@@ -69,5 +71,5 @@
 }
 
 .final-text .markdown-content {
-  font-size: 14.5px;
+  font-size: 13.5px;
 }

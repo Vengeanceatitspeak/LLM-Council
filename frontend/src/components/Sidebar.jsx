@@ -55,15 +55,15 @@ export default function Sidebar({
 
   // Credit bar color based on usage
   const getUsageColor = () => {
-    if (usage.percentage < 50) return 'var(--accent-green)';
+    if (usage.percentage < 50) return 'var(--accent-primary)';
     if (usage.percentage < 80) return 'var(--accent-gold)';
     return 'var(--accent-red)';
   };
 
   const getUsageGradient = () => {
-    if (usage.percentage < 50) return 'linear-gradient(90deg, #00d4aa, #00b894)';
-    if (usage.percentage < 80) return 'linear-gradient(90deg, #f59e0b, #f97316)';
-    return 'linear-gradient(90deg, #ef4444, #dc2626)';
+    if (usage.percentage < 50) return 'linear-gradient(90deg, #00c896, #009e7a)';
+    if (usage.percentage < 80) return 'linear-gradient(90deg, #d4a843, #c4851c)';
+    return 'linear-gradient(90deg, #d94452, #b8313e)';
   };
 
   return (
@@ -71,10 +71,16 @@ export default function Sidebar({
       {/* Brand Header */}
       <div className="sidebar-header">
         <div className="brand">
-          <span className="brand-icon">💰</span>
+          <div className="brand-logo">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+          </div>
           <div className="brand-text">
             <h1>MakeMeRichGPT</h1>
-            <span className="brand-subtitle">Finance AI Council</span>
+            <span className="brand-subtitle">Financial Deliberation Council</span>
           </div>
         </div>
         <button
@@ -83,18 +89,18 @@ export default function Sidebar({
           title="New Conversation"
           id="new-conversation-btn"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
-          New Chat
+          New Session
         </button>
       </div>
 
       {/* Credit Usage Bar */}
       <div className="credit-section">
         <div className="credit-header">
-          <span className="credit-label">Daily Credits</span>
+          <span className="credit-label">Daily Allocation</span>
           <span className="credit-count" style={{ color: getUsageColor() }}>
             {usage.used}/{usage.limit}
           </span>
@@ -119,9 +125,11 @@ export default function Sidebar({
       <div className="conversation-list">
         {conversations.length === 0 ? (
           <div className="no-conversations">
-            <span className="no-conv-icon">💬</span>
-            <span>No conversations yet</span>
-            <span className="no-conv-hint">Start a new chat to begin</span>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.4">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            <span>No sessions yet</span>
+            <span className="no-conv-hint">Start a new session to begin analysis</span>
           </div>
         ) : (
           conversations.map((conv) => (
@@ -145,7 +153,7 @@ export default function Sidebar({
                 />
               ) : deleteConfirmId === conv.id ? (
                 <div className="delete-confirm" onClick={(e) => e.stopPropagation()}>
-                  <span className="delete-confirm-text">Delete this chat?</span>
+                  <span className="delete-confirm-text">Delete this session?</span>
                   <div className="delete-confirm-actions">
                     <button
                       className="delete-yes"
@@ -164,7 +172,7 @@ export default function Sidebar({
               ) : (
                 <>
                   <div className="conversation-title">
-                    {conv.title || 'New Conversation'}
+                    {conv.title || 'New Session'}
                   </div>
                   <div className="conversation-actions">
                     <button
@@ -197,7 +205,7 @@ export default function Sidebar({
 
       {/* Footer */}
       <div className="sidebar-footer">
-        <span>10 AI Specialists • 3-Stage Analysis</span>
+        <span>10 Models · 3-Stage Deliberation · LangGraph</span>
       </div>
     </div>
   );

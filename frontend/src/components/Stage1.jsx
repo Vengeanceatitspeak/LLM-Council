@@ -2,6 +2,35 @@ import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import './Stage1.css';
 
+function ThinkingBlock({ thinking }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (!thinking) return null;
+
+  return (
+    <div className="thinking-block">
+      <div className="thinking-header" onClick={() => setIsExpanded(!isExpanded)}>
+        <div className="thinking-header-left">
+          <svg className="thinking-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4" />
+            <path d="M12 8h.01" />
+          </svg>
+          <span className="thinking-label">Chain of Thought</span>
+        </div>
+        <span className="thinking-toggle">
+          {isExpanded ? 'COLLAPSE' : 'EXPAND'}
+        </span>
+      </div>
+      {isExpanded && (
+        <div className="thinking-content">
+          {thinking}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Stage1({ responses }) {
   const [activeTab, setActiveTab] = useState(0);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -15,11 +44,17 @@ export default function Stage1({ responses }) {
       <div className="stage-header" onClick={() => setIsCollapsed(!isCollapsed)}>
         <h3 className="stage-title">
           <span className="stage-badge">1</span>
-          Individual Specialist Analyses
-          <span className="stage-count">{responses.length} specialists</span>
+          Individual Model Analyses
+          <span className="stage-count">{responses.length} models</span>
         </h3>
         <button className="collapse-btn">
-          {isCollapsed ? '▸' : '▾'}
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            {isCollapsed ? (
+              <polyline points="9 18 15 12 9 6" />
+            ) : (
+              <polyline points="6 9 12 15 18 9" />
+            )}
+          </svg>
         </button>
       </div>
 
@@ -35,24 +70,32 @@ export default function Stage1({ responses }) {
                   '--tab-color': resp.color || '#888',
                 }}
               >
-                <span className="tab-icon">{resp.icon || '💼'}</span>
-                <span className="tab-label">{resp.role || resp.model.split('/')[1] || resp.model}</span>
+                <span className="tab-dot" style={{ background: resp.color || '#888' }} />
+                <span className="tab-label">
+                  {resp.display_name || resp.model}
+                </span>
               </button>
             ))}
           </div>
 
           <div className="tab-content">
             <div className="model-badge">
-              <span className="model-icon">{responses[activeTab].icon || '💼'}</span>
+              <span className="model-dot" style={{ background: responses[activeTab].color }} />
               <div className="model-info">
-                <span className="model-role" style={{ color: responses[activeTab].color }}>
-                  {responses[activeTab].role || 'Analyst'}
+                <span className="model-display-name">
+                  {responses[activeTab].display_name || responses[activeTab].model}
                 </span>
                 <span className="model-name">{responses[activeTab].model}</span>
               </div>
             </div>
+
+            {/* Thinking Block — visible chain of thought */}
+            <ThinkingBlock thinking={responses[activeTab].thinking} />
+
             <div className="response-text markdown-content">
-              <ReactMarkdown>{responses[activeTab].response}</ReactMarkdown>
+              <ReactMarkdown>
+                {responses[activeTab].output || responses[activeTab].response}
+              </ReactMarkdown>
             </div>
           </div>
         </div>

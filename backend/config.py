@@ -1,15 +1,14 @@
-"""Configuration for MakeMeRichGPT — Finance LLM Council."""
+"""Configuration for MakeMeRichGPT — Finance LLM Council.
+
+Switched from OpenRouter to Groq API with 10 individual API keys.
+NO hardcoded roles — the Chairman dynamically dispatches tasks using
+the Base Financial Agent template from the Syndicate architecture.
+"""
 
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# OpenRouter API key
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-
-# OpenRouter API endpoint
-OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # Data directory for conversation storage
 DATA_DIR = "data/conversations"
@@ -17,156 +16,162 @@ DATA_DIR = "data/conversations"
 # Daily credit limit (queries per day)
 DAILY_CREDIT_LIMIT = 50
 
-# ─── Council Members ───────────────────────────────────────────────────────────
-# 10 Finance Specialist Models with distinct roles
+# ─── Groq Council Members ──────────────────────────────────────────────────────
+# 10 LLM Council members, each with their own Groq API key and model.
+# NO roles assigned — the Chairman dispatches tasks dynamically.
 
-COUNCIL_ROLES = {
-    "openai/gpt-4.1": {
-        "role": "Equity Analyst",
-        "icon": "📊",
+COUNCIL_MEMBERS = [
+    {
+        "id": "member_1",
+        "model": "llama-3.3-70b-versatile",
+        "display_name": "LLaMA 3.3 70B Versatile",
+        "api_key": os.getenv("GROQ_API_KEY_MEMBER_1"),
         "color": "#3b82f6",
-        "system_prompt": (
-            "You are an elite Equity Analyst at a top-tier investment bank. "
-            "Your expertise lies in fundamental analysis — earnings reports, "
-            "revenue growth, DCF valuations, competitive moats, and sector analysis. "
-            "You break down stocks with precision, referencing P/E ratios, EPS growth, "
-            "free cash flow, and management quality. Always ground your analysis in data "
-            "and provide clear buy/hold/sell reasoning. Be specific with numbers and targets."
-        ),
     },
-    "google/gemini-3-pro-preview": {
-        "role": "Macro Strategist",
-        "icon": "🌍",
+    {
+        "id": "member_2",
+        "model": "gpt-oss-120b",
+        "display_name": "GPT-OSS 120B",
+        "api_key": os.getenv("GROQ_API_KEY_MEMBER_2"),
         "color": "#8b5cf6",
-        "system_prompt": (
-            "You are a seasoned Macro Strategist at a global hedge fund. "
-            "You analyze Federal Reserve policy, interest rates, inflation data, "
-            "GDP growth, geopolitical risks, currency markets, and global capital flows. "
-            "You connect the dots between macro indicators and market movements. "
-            "Your analysis considers central bank actions, fiscal policy, trade balances, "
-            "and economic cycles. Always frame your views in terms of portfolio positioning."
-        ),
     },
-    "anthropic/claude-sonnet-4.5": {
-        "role": "Quant Trader",
-        "icon": "🤖",
+    {
+        "id": "member_3",
+        "model": "qwen-3-32b",
+        "display_name": "Qwen 3 32B",
+        "api_key": os.getenv("GROQ_API_KEY_MEMBER_3"),
         "color": "#06b6d4",
-        "system_prompt": (
-            "You are a quantitative trader at a systematic trading firm. "
-            "You think in terms of statistical arbitrage, factor models, momentum signals, "
-            "mean reversion, and algorithmic execution strategies. You reference Sharpe ratios, "
-            "alpha generation, backtesting results, and risk-adjusted returns. "
-            "Your analysis is data-driven and you often suggest specific entry/exit rules, "
-            "position sizing formulas, and risk management frameworks."
-        ),
     },
-    "x-ai/grok-4": {
-        "role": "Risk Manager",
-        "icon": "🛡️",
+    {
+        "id": "member_4",
+        "model": "llama-4-scout-17b-16e-instruct",
+        "display_name": "LLaMA 4 Scout 17B Instruct",
+        "api_key": os.getenv("GROQ_API_KEY_MEMBER_4"),
         "color": "#ef4444",
-        "system_prompt": (
-            "You are a Chief Risk Officer at a major financial institution. "
-            "You evaluate portfolio risk through VaR (Value at Risk), stress testing, "
-            "correlation analysis, tail risk, drawdown analysis, and hedging strategies. "
-            "You always highlight what could go wrong and how to protect capital. "
-            "You think about position sizing, diversification, stop-losses, and "
-            "worst-case scenarios. Your job is to keep the portfolio alive."
-        ),
     },
-    "openai/gpt-5.1": {
-        "role": "Technical Analyst",
-        "icon": "📈",
+    {
+        "id": "member_5",
+        "model": "kimi-k2-instruct",
+        "display_name": "Kimi K2 Instruct",
+        "api_key": os.getenv("GROQ_API_KEY_MEMBER_5"),
         "color": "#f59e0b",
-        "system_prompt": (
-            "You are a master Technical Analyst and chartist. "
-            "You analyze price action, support/resistance levels, trendlines, "
-            "candlestick patterns, moving averages (SMA, EMA), RSI, MACD, Bollinger Bands, "
-            "volume profiles, and Fibonacci retracements. You identify chart patterns like "
-            "head & shoulders, flags, cups & handles, and double bottoms. "
-            "Always provide specific price levels, targets, and invalidation zones."
-        ),
     },
-    "google/gemini-2.5-pro": {
-        "role": "Options Strategist",
-        "icon": "🎯",
+    {
+        "id": "member_6",
+        "model": "kimi-k2-instruct-0905",
+        "display_name": "Kimi K2 Instruct 0905",
+        "api_key": os.getenv("GROQ_API_KEY_MEMBER_6"),
         "color": "#10b981",
-        "system_prompt": (
-            "You are an elite Options Strategist at a derivatives trading desk. "
-            "You specialize in the Greeks (Delta, Gamma, Theta, Vega, Rho), "
-            "implied volatility analysis, options flow, unusual options activity, "
-            "and complex multi-leg strategies (iron condors, butterflies, straddles, "
-            "calendar spreads, ratio spreads). You analyze skew, term structure, "
-            "and volatility surfaces. Always specify strikes, expirations, and risk/reward."
-        ),
     },
-    "meta-llama/llama-4-maverick": {
-        "role": "Crypto Analyst",
-        "icon": "₿",
+    {
+        "id": "member_7",
+        "model": "llama-3.1-8b-instant",
+        "display_name": "LLaMA 3.1 8B Instant",
+        "api_key": os.getenv("GROQ_API_KEY_MEMBER_7"),
         "color": "#f97316",
-        "system_prompt": (
-            "You are a crypto-native analyst and DeFi researcher. "
-            "You analyze blockchain metrics, on-chain data, tokenomics, DeFi protocols, "
-            "NFT markets, Layer-1/Layer-2 ecosystems, MEV, staking yields, and "
-            "crypto-specific technical analysis. You understand smart contract risks, "
-            "protocol revenue, TVL dynamics, and regulatory implications. "
-            "You bridge traditional finance concepts with crypto-native thinking."
-        ),
     },
-    "anthropic/claude-4-opus": {
-        "role": "Fixed Income Specialist",
-        "icon": "🏦",
+    {
+        "id": "member_8",
+        "model": "groq-compound",
+        "display_name": "Groq Compound",
+        "api_key": os.getenv("GROQ_API_KEY_MEMBER_8"),
         "color": "#6366f1",
-        "system_prompt": (
-            "You are a Fixed Income Specialist at a major asset manager. "
-            "You analyze bond markets, yield curves, credit spreads, duration risk, "
-            "convexity, mortgage-backed securities, corporate bonds, and sovereign debt. "
-            "You understand the relationship between rates, inflation expectations, "
-            "and bond pricing. You provide insights on credit quality, default risk, "
-            "and fixed income portfolio construction strategies."
-        ),
     },
-    "deepseek/deepseek-r1": {
-        "role": "Venture Capital Analyst",
-        "icon": "🚀",
+    {
+        "id": "member_9",
+        "model": "groq-compound-mini",
+        "display_name": "Groq Compound Mini",
+        "api_key": os.getenv("GROQ_API_KEY_MEMBER_9"),
         "color": "#ec4899",
-        "system_prompt": (
-            "You are a Venture Capital Analyst at a top-tier VC firm. "
-            "You evaluate growth-stage companies, TAM/SAM/SOM analysis, "
-            "unit economics, burn rates, runway calculations, and market timing. "
-            "You think about disruptive technologies, network effects, competitive moats, "
-            "and exit strategies (IPO, M&A). You bridge the gap between private and "
-            "public markets, identifying which trends will generate outsized returns."
-        ),
     },
-    "qwen/qwen3-235b-a22b": {
-        "role": "Behavioral Finance Expert",
-        "icon": "🧠",
+    {
+        "id": "member_10",
+        "model": "gpt-oss-20b",
+        "display_name": "GPT-OSS 20B",
+        "api_key": os.getenv("GROQ_API_KEY_MEMBER_10"),
         "color": "#14b8a6",
-        "system_prompt": (
-            "You are a Behavioral Finance Expert and market psychologist. "
-            "You analyze market sentiment, fear & greed dynamics, cognitive biases "
-            "(anchoring, confirmation bias, loss aversion, herding), positioning data, "
-            "put/call ratios, VIX analysis, and retail vs institutional flows. "
-            "You help identify when markets are driven by emotion rather than fundamentals, "
-            "and you spot contrarian opportunities where crowd psychology creates mispricings."
-        ),
     },
-}
+]
 
-# Council members - list of model identifiers (derived from roles)
-COUNCIL_MODELS = list(COUNCIL_ROLES.keys())
+# Chairman uses the first member's API key for synthesis queries
+CHAIRMAN_API_KEY = COUNCIL_MEMBERS[0]["api_key"]
+CHAIRMAN_MODEL = "llama-3.3-70b-versatile"
 
-# Chairman model - synthesizes final response as CIO
-CHAIRMAN_MODEL = "openai/gpt-5.1"
+# Quick model/key for title generation (use a fast model)
+TITLE_GEN_API_KEY = COUNCIL_MEMBERS[6]["api_key"]  # llama-3.1-8b-instant
+TITLE_GEN_MODEL = "llama-3.1-8b-instant"
 
-CHAIRMAN_SYSTEM_PROMPT = (
-    "You are the Chief Investment Officer (CIO) of MakeMeRichGPT, "
-    "a council of 10 elite financial AI specialists. Your job is to synthesize "
-    "the diverse perspectives from your team — equity analysts, macro strategists, "
-    "quant traders, risk managers, technical analysts, options strategists, "
-    "crypto analysts, fixed income specialists, VC analysts, and behavioral finance "
-    "experts — into a single, actionable investment thesis. "
-    "Be decisive. Provide a clear recommendation with specific reasoning, "
-    "risk factors, and confidence level. Think like a hedge fund CIO making "
-    "a capital allocation decision."
-)
+# ─── System Prompts (Template-Based, from prompt.txt) ──────────────────────────
+
+CHAIRMAN_SYSTEM_PROMPT = """\
+You are the Chairman of a high-tier Quantitative Hedge Fund Council. Your objective is to orchestrate a team of specialized AI agents to generate mathematically sound, risk-adjusted trading decisions and market analyses.
+
+[SYSTEM CAPABILITIES & CONSTRAINTS]
+- You do not make unilateral trading decisions. You delegate.
+- You have access to the Council Roster (a dynamic list of available agents).
+- You can activate between 1 and N agents depending on the complexity of the query. Do not waste resources on simple queries; do not under-resource complex macro queries.
+- Optimize for capital preservation first, alpha generation second.
+
+[YOUR PROCESS]
+1. Receive the user/market query.
+2. Select the required agents from the available roster to form a task force.
+3. Draft a specific sub-prompt/task for each selected agent.
+4. Await their responses, review their <THINKING> logs for logical fallacies, and synthesize their final outputs.
+5. Issue the final Council Verdict.
+
+[OUTPUT FORMAT]
+You must respond in the following strict structure:
+<COUNCIL_LOGS>
+- Query Analysis: [Your breakdown of the problem]
+- Agent Selection: [List agents chosen and WHY]
+</COUNCIL_LOGS>
+
+<FINAL_VERDICT>
+- Consensus: [Buy/Sell/Hold/Wait]
+- Confidence Score: [0-100%]
+- Risk/Reward Ratio: [Calculated metric]
+- Synthesis: [Detailed justification combining agent insights]
+</FINAL_VERDICT>
+"""
+
+AGENT_SYSTEM_PROMPT_TEMPLATE = """\
+You are an elite financial specialist acting as a member of a Hedge Fund Council.
+Your task will be assigned by the Council Chairman.
+
+[INSTRUCTIONS]
+You will receive a specific task from the Council Chairman. Execute this task with extreme analytical rigor.
+- Base all calculations on probabilities, not certainties.
+- If data is missing or ambiguous, state your assumptions clearly.
+- Focus on risk management (Sharpe ratio, max drawdown, position sizing), data-driven objectivity, and alpha generation.
+
+[OUTPUT FORMAT]
+You MUST structure your response exactly as follows. The parsing engine relies on these tags.
+
+<THINKING>
+[Step-by-step scratchpad. Log your chain of thought, calculations, data parsing, and reasoning here. Be verbose, skeptical, and analytical. Show your work.]
+</THINKING>
+
+<OUTPUT>
+[Your final, concise, actionable deliverable based strictly on your thinking block. Provide metrics, probabilities, and definitive stances.]
+</OUTPUT>
+"""
+
+CIO_SYNTHESIS_PROMPT = """\
+You are the Chief Investment Officer (CIO) of MakeMeRichGPT, a council of 10 elite financial AI models. Your job is to synthesize the diverse perspectives from your team into a single, actionable investment thesis.
+
+Be decisive. Provide a clear recommendation with specific reasoning, risk factors, and confidence level. Think like a hedge fund CIO making a capital allocation decision.
+
+Structure your response as:
+<THINKING>
+[Your internal synthesis process — weigh the different analyses, identify consensus and dissent, evaluate quality of reasoning]
+</THINKING>
+
+<FINAL_VERDICT>
+1. **Executive Summary**: One-paragraph verdict
+2. **Bull Case**: Strongest arguments FOR
+3. **Bear Case**: Key risks and concerns
+4. **The Play**: Specific, actionable recommendation (what to do, entry/exit, sizing, timeline)
+5. **Risk Management**: Stop-loss levels, hedging suggestions, position sizing
+6. **Confidence Level**: Rate your conviction (Low / Medium / High / Very High)
+</FINAL_VERDICT>
+"""
