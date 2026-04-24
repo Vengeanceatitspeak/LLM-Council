@@ -1,0 +1,8 @@
+Added a web Scraper
+action needed: does not work Like LLM saying no real time data it must scrap by itself wothout asking or whatsoever
+Added a image or Document uploader 
+action needed : ocr based reading need to be debugged
+image generation is added 
+action needed: the request is not reaching cloudflare 
+
+Read Conversations history for more info 
