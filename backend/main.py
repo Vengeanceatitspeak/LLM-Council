@@ -269,6 +269,27 @@ async def get_image(filename: str):
     return FileResponse(filepath, media_type="image/png")
 
 
+def build_conversation_history(conversation: dict, max_turns: int = 3) -> List[Dict[str, str]]:
+    """Build a standard message history from the custom conversation schema."""
+    history = []
+    messages = conversation.get("messages", [])
+    
+    # We want the last `max_turns` turns (user + assistant pairs)
+    recent_messages = messages[-(max_turns * 2):]
+    
+    for msg in recent_messages:
+        if msg["role"] == "user":
+            history.append({"role": "user", "content": msg["content"]})
+        elif msg["role"] == "assistant":
+            # Extract the final output from stage3
+            content = "Assistant response unavailable"
+            if "stage3" in msg and isinstance(msg["stage3"], dict):
+                content = msg["stage3"].get("output", "No response generated.")
+            history.append({"role": "assistant", "content": content})
+            
+    return history
+
+
 # ─── Message Endpoints ──────────────────────────────────────────────────────
 
 @app.post("/api/conversations/{conversation_id}/message")
@@ -292,6 +313,9 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
     # Check if this is the first message
     is_first_message = len(conversation["messages"]) == 0
 
+    # Build conversation history before appending the current message
+    history = build_conversation_history(conversation)
+
     # Add user message
     storage.add_user_message(conversation_id, request.content)
 
@@ -305,7 +329,8 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
 
     # Run the 3-stage council process via LangGraph
     stage1_results, stage2_results, stage3_result, metadata = await run_full_council(
-        request.content
+        request.content,
+        conversation_history=history
     )
 
     # Add assistant message with all stages
@@ -362,6 +387,9 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
         overall_start = time.time()
 
         try:
+            # Build conversation history before appending the current message
+            history = build_conversation_history(conversation)
+
             # Add user message
             storage.add_user_message(conversation_id, request.content)
 
@@ -426,10 +454,10 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             if is_first_message:
                 title_task = asyncio.create_task(generate_conversation_title(request.content))
 
-            # Stage 1: Collect responses
+            # Stage 1: Collect responses (and dispatch)
             stage1_start = time.time()
             yield f"data: {json.dumps({'type': 'stage1_start', 'data': {'timestamp': stage1_start}})}\n\n"
-            stage1_results = await stage1_collect_responses(augmented_content)
+            stage1_results, dispatch_plan = await stage1_collect_responses(augmented_content, conversation_history=history)
 
             # Count actual tokens from stage 1
             stage1_tokens = _sum_tokens(stage1_results)
@@ -441,7 +469,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             # Stage 2: Collect rankings
             stage2_start = time.time()
             yield f"data: {json.dumps({'type': 'stage2_start', 'data': {'timestamp': stage2_start}})}\n\n"
-            stage2_results, label_to_model = await stage2_collect_rankings(augmented_content, stage1_results)
+            stage2_results, label_to_model = await stage2_collect_rankings(augmented_content, stage1_results, conversation_history=history)
             aggregate_rankings = calculate_aggregate_rankings(stage2_results, label_to_model)
 
             stage2_tokens = _sum_tokens(stage2_results)
@@ -453,7 +481,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             # Stage 3: Synthesize final answer
             stage3_start = time.time()
             yield f"data: {json.dumps({'type': 'stage3_start', 'data': {'timestamp': stage3_start}})}\n\n"
-            stage3_result = await stage3_synthesize_final(augmented_content, stage1_results, stage2_results)
+            stage3_result = await stage3_synthesize_final(augmented_content, stage1_results, stage2_results, dispatch_plan=dispatch_plan, conversation_history=history)
 
             stage3_tokens = stage3_result.get("tokens", {}).get("total_tokens", 0)
             total_tokens += stage3_tokens

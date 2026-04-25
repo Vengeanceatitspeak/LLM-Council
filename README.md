@@ -1,24 +1,31 @@
-# LLM Council
+# LLM Council — MakeMeRichGPT
 
 ![llmcouncil](header.jpg)
 
-The idea of this repo is that instead of asking a question to your favorite LLM provider (e.g. OpenAI GPT 5.1, Google Gemini 3.0 Pro, Anthropic Claude Sonnet 4.5, xAI Grok 4, eg.c), you can group them into your "LLM Council". This repo is a simple, local web app that essentially looks like ChatGPT except it uses OpenRouter to send your query to multiple LLMs, it then asks them to review and rank each other's work, and finally a Chairman LLM produces the final response.
+This project is a 3-stage deliberation system where multiple LLMs collaboratively answer user questions, acting as a Quantitative Hedge Fund Council. The key innovation is a LangGraph-orchestrated peer review system, preventing models from playing favorites and ensuring well-rounded financial analyses.
 
-In a bit more detail, here is what happens when you submit a query:
+## Architecture & Data Flow
 
-1. **Stage 1: First opinions**. The user query is given to all LLMs individually, and the responses are collected. The individual responses are shown in a "tab view", so that the user can inspect them all one by one.
-2. **Stage 2: Review**. Each individual LLM is given the responses of the other LLMs. Under the hood, the LLM identities are anonymized so that the LLM can't play favorites when judging their outputs. The LLM is asked to rank them in accuracy and insight.
-3. **Stage 3: Final response**. The designated Chairman of the LLM Council takes all of the model's responses and compiles them into a single final answer that is presented to the user.
+1. **Pre-Processing (Tools & Context)**: The user query is checked for URLs to scrape (BeautifulSoup4), web search intent (DuckDuckGo), or uploaded documents/images (PyPDF2, PyTesseract). A comprehensive `augmented_content` prompt is built with live data.
+2. **Stage 0: Chairman Dispatch**: The Chairman model analyzes the query, determines how many agents to activate from the 10-member roster, and creates a tailored, dynamic system prompt for each agent.
+3. **Stage 1: Individual Analyses**: The selected LLMs independently analyze the query with their custom roles. Responses are formatted into `<THINKING>` and `<OUTPUT>` blocks.
+4. **Stage 2: Peer Review**: The individual responses are anonymized (Response A, Response B) and sent to the selected LLMs. They evaluate each other strictly on financial criteria (Accuracy, Actionability, Risk, Depth, Clarity) and rank them.
+5. **Stage 3: CIO Synthesis**: The Chairman reviews the initial analyses and the peer rankings to produce a final, definitive investment thesis.
 
-## Vibe Code Alert
+## Features
 
-This project was 99% vibe coded as a fun Saturday hack because I wanted to explore and evaluate a number of LLMs side by side in the process of [reading books together with LLMs](https://x.com/karpathy/status/1990577951671509438). It's nice and useful to see multiple responses side by side, and also the cross-opinions of all LLMs on each other's outputs. I'm not going to support it in any way, it's provided here as is for other people's inspiration and I don't intend to improve it. Code is ephemeral now and libraries are over, ask your LLM to change it in whatever way you like.
+- **Stateless Memory**: Full conversation history is automatically injected into the API calls for true context awareness without breaking stateless REST design.
+- **Dynamic Dispatching**: The Chairman dynamically assigns roles to agents based on the query complexity.
+- **AI Image Generation**: Integrated Cloudflare Workers AI for inline image generation.
+- **Rich Markdown Formatting**: Supports code highlighting, tables, and lists.
+- **Token Usage Dashboard**: Live tracking of daily Groq API usage and token limits.
+- **Thinking Timers**: Live spinners and precise timing metrics for each LangGraph stage.
 
 ## Setup
 
 ### 1. Install Dependencies
 
-The project uses [uv](https://docs.astral.sh/uv/) for project management.
+The project uses [uv](https://docs.astral.sh/uv/) for Python dependency management.
 
 **Backend:**
 ```bash
@@ -29,33 +36,25 @@ uv sync
 ```bash
 cd frontend
 npm install
-cd ..
 ```
 
-### 2. Configure API Key
+### 2. Configure Environment
 
 Create a `.env` file in the project root:
 
 ```bash
-OPENROUTER_API_KEY=sk-or-v1-...
+# Provide a single Groq API key for all council members
+GROQ_API_KEY="gsk_..."
+
+# Required for Image Generation
+CLOUDFLARE_API_TOKEN="your_token_here"
 ```
 
-Get your API key at [openrouter.ai](https://openrouter.ai/). Make sure to purchase the credits you need, or sign up for automatic top up.
+*Note: The Chairman and Title Generator currently reuse keys 1 and 7, respectively, as defined in `backend/config.py`.*
 
-### 3. Configure Models (Optional)
+### 3. Customize the Council (Optional)
 
-Edit `backend/config.py` to customize the council:
-
-```python
-COUNCIL_MODELS = [
-    "openai/gpt-5.1",
-    "google/gemini-3-pro-preview",
-    "anthropic/claude-sonnet-4.5",
-    "x-ai/grok-4",
-]
-
-CHAIRMAN_MODEL = "google/gemini-3-pro-preview"
-```
+Edit `backend/config.py` to customize the `COUNCIL_MEMBERS` array and models. The default configuration uses a variety of open-source models available on Groq (LLaMA 3, Qwen, etc.).
 
 ## Running the Application
 
@@ -81,7 +80,9 @@ Then open http://localhost:5173 in your browser.
 
 ## Tech Stack
 
-- **Backend:** FastAPI (Python 3.10+), async httpx, OpenRouter API
-- **Frontend:** React + Vite, react-markdown for rendering
-- **Storage:** JSON files in `data/conversations/`
-- **Package Management:** uv for Python, npm for JavaScript
+- **Orchestration**: LangGraph (StateGraph)
+- **Backend:** FastAPI (Python), async httpx, Groq API
+- **Frontend:** React + Vite, react-markdown, Server-Sent Events (SSE)
+- **Data Storage:** JSON-based conversation storage in `data/conversations/`
+- **Scraping & Search**: BeautifulSoup4, DuckDuckGo (DDGS)
+- **OCR/Docs**: pytesseract, PyPDF2

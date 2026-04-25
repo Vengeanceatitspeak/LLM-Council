@@ -34,6 +34,8 @@ from .config import (
 class CouncilState(TypedDict):
     """State that flows through the LangGraph pipeline."""
     user_query: str
+    conversation_history: List[Dict[str, str]]
+    dispatch_plan: Dict[str, Any]
     stage1_results: List[Dict[str, Any]]
     stage2_results: List[Dict[str, Any]]
     stage3_result: Dict[str, Any]
@@ -108,24 +110,104 @@ def parse_thinking_and_output(raw_text: str) -> Dict[str, str]:
 
 # ─── LangGraph Node Functions ──────────────────────────────────────────────────
 
+import json
+
+async def node_stage0_dispatch(state: CouncilState) -> dict:
+    """
+    Stage 0: Chairman decomposes the query and dispatches to specific agents.
+    """
+    user_query = state["user_query"]
+    conversation_history = state.get("conversation_history", [])
+    
+    # Prepend history if available
+    messages = conversation_history + [{"role": "user", "content": user_query}]
+
+    response = await query_groq_model(
+        api_key=CHAIRMAN_API_KEY,
+        model=CHAIRMAN_MODEL,
+        messages=messages,
+        system_prompt=CHAIRMAN_SYSTEM_PROMPT,
+    )
+    
+    dispatch_plan = {}
+    if response and response.get("content"):
+        content = response["content"].strip()
+        # Clean up possible markdown fences
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+        
+        try:
+            dispatch_plan = json.loads(content)
+        except json.JSONDecodeError as e:
+            print(f"Error parsing Chairman dispatch JSON: {e}")
+            dispatch_plan = {"error": "Failed to parse dispatch plan"}
+            
+    return {"dispatch_plan": dispatch_plan}
+
+
 async def node_stage1_collect(state: CouncilState) -> dict:
     """
-    Stage 1: All council members analyze the query independently.
+    Stage 1: Dispatched council members analyze the query independently.
     Each produces <THINKING> + <OUTPUT> structured response.
     """
     user_query = state["user_query"]
-    messages = [{"role": "user", "content": user_query}]
+    conversation_history = state.get("conversation_history", [])
+    dispatch_plan = state.get("dispatch_plan", {})
+    
+    messages = conversation_history + [{"role": "user", "content": user_query}]
+    
+    tasks = dispatch_plan.get("council_tasks", [])
+    
+    # If chairman failed, fallback to querying a few default agents
+    if not tasks:
+        tasks = [
+            {"agent_id": "member_1", "assigned_role": "Analyst", "task": "General analysis", "output_format": "Standard", "constraints": "None"},
+            {"agent_id": "member_2", "assigned_role": "Risk Manager", "task": "Risk analysis", "output_format": "Standard", "constraints": "None"}
+        ]
 
-    # Query all members in parallel with the agent system prompt
-    responses = await query_groq_models_parallel(
-        COUNCIL_MEMBERS,
-        messages,
-        system_prompt=AGENT_SYSTEM_PROMPT_TEMPLATE,
-    )
+    # Map member IDs and create dynamic system prompts
+    selected_members = []
+    member_prompts = {}
+    
+    for t in tasks:
+        agent_id_raw = t.get("agent_id")
+        member_id = f"member_{agent_id_raw}" if str(agent_id_raw).isdigit() else str(agent_id_raw)
+        
+        member = next((m for m in COUNCIL_MEMBERS if m["id"] == member_id), None)
+        if member:
+            selected_members.append(member)
+            dynamic_prompt = AGENT_SYSTEM_PROMPT_TEMPLATE + f"\n\n[YOUR SPECIFIC ASSIGNMENT]\nROLE: {t.get('assigned_role')}\nTASK: {t.get('task')}\nOUTPUT FORMAT: {t.get('output_format')}\nCONSTRAINTS: {t.get('constraints')}"
+            member_prompts[member_id] = dynamic_prompt
+            
+    if not selected_members:
+        selected_members = [COUNCIL_MEMBERS[0]]
+        member_prompts[COUNCIL_MEMBERS[0]["id"]] = AGENT_SYSTEM_PROMPT_TEMPLATE
+
+    # Query dispatched members in parallel, each with their own dynamic system prompt
+    tasks_coros = [
+        query_groq_model(
+            api_key=member["api_key"],
+            model=member["model"],
+            messages=messages,
+            system_prompt=member_prompts[member["id"]]
+        ) for member in selected_members
+    ]
+    
+    results = await asyncio.gather(*tasks_coros, return_exceptions=True)
+    
+    responses = {}
+    for member, res in zip(selected_members, results):
+        if not isinstance(res, Exception) and res is not None:
+            responses[member["id"]] = res
 
     # Format results with parsed thinking
     stage1_results = []
-    for member in COUNCIL_MEMBERS:
+    for member in selected_members:
         response = responses.get(member["id"])
         if response is not None and response.get("content"):
             parsed = parse_thinking_and_output(response["content"])
@@ -150,6 +232,7 @@ async def node_stage2_review(state: CouncilState) -> dict:
     Finance-specific evaluation criteria.
     """
     user_query = state["user_query"]
+    conversation_history = state.get("conversation_history", [])
     stage1_results = state["stage1_results"]
 
     if not stage1_results:
@@ -210,13 +293,20 @@ FINAL RANKING:
 
 Now provide your evaluation and ranking:"""
 
-    messages = [{"role": "user", "content": ranking_prompt}]
+    messages = conversation_history + [{"role": "user", "content": ranking_prompt}]
 
-    # Get rankings from all council members in parallel
-    responses = await query_groq_models_parallel(COUNCIL_MEMBERS, messages)
+    # Identify which members actually participated in stage 1
+    participated_ids = {r["member_id"] for r in stage1_results}
+    selected_members = [m for m in COUNCIL_MEMBERS if m["id"] in participated_ids]
+    
+    if not selected_members:
+        selected_members = COUNCIL_MEMBERS
+
+    # Get rankings from the selected council members in parallel
+    responses = await query_groq_models_parallel(selected_members, messages)
 
     stage2_results = []
-    for member in COUNCIL_MEMBERS:
+    for member in selected_members:
         response = responses.get(member["id"])
         if response is not None and response.get("content"):
             full_text = response["content"]
@@ -246,8 +336,10 @@ async def node_stage3_synthesize(state: CouncilState) -> dict:
     Stage 3: CIO synthesizes final verdict using <THINKING> + <FINAL_VERDICT>.
     """
     user_query = state["user_query"]
+    conversation_history = state.get("conversation_history", [])
     stage1_results = state["stage1_results"]
     stage2_results = state["stage2_results"]
+    dispatch_plan = state.get("dispatch_plan", {})
 
     # Build comprehensive context for CIO
     stage1_text = "\n\n".join([
@@ -259,8 +351,10 @@ async def node_stage3_synthesize(state: CouncilState) -> dict:
         f"**{result['display_name']}**:\n{result['ranking']}"
         for result in stage2_results
     ])
+    
+    synthesis_instruction = dispatch_plan.get("synthesis_instruction", "Be decisive. Your investors are paying for alpha, not hedged language.")
 
-    chairman_prompt = f"""Your council of 10 financial AI models has analyzed the following question and peer-reviewed each other's work.
+    chairman_prompt = f"""Your council of financial AI models has analyzed the following question and peer-reviewed each other's work.
 
 Original Question: {user_query}
 
@@ -271,9 +365,9 @@ STAGE 2 — Peer Rankings & Evaluations:
 {stage2_text}
 
 As CIO, synthesize all perspectives into a DEFINITIVE investment thesis.
-Be decisive. Your investors are paying for alpha, not hedged language."""
+{synthesis_instruction}"""
 
-    messages = [{"role": "user", "content": chairman_prompt}]
+    messages = conversation_history + [{"role": "user", "content": chairman_prompt}]
 
     response = await query_groq_model(
         api_key=CHAIRMAN_API_KEY,
@@ -312,16 +406,18 @@ Be decisive. Your investors are paying for alpha, not hedged language."""
 # ─── Build the LangGraph ───────────────────────────────────────────────────────
 
 def build_council_graph() -> StateGraph:
-    """Build the LangGraph StateGraph for the 3-stage council process."""
+    """Build the LangGraph StateGraph for the council process."""
     workflow = StateGraph(CouncilState)
 
     # Add nodes
+    workflow.add_node("stage0_dispatch", node_stage0_dispatch)
     workflow.add_node("stage1_collect", node_stage1_collect)
     workflow.add_node("stage2_review", node_stage2_review)
     workflow.add_node("stage3_synthesize", node_stage3_synthesize)
 
     # Define the execution flow
-    workflow.set_entry_point("stage1_collect")
+    workflow.set_entry_point("stage0_dispatch")
+    workflow.add_edge("stage0_dispatch", "stage1_collect")
     workflow.add_edge("stage1_collect", "stage2_review")
     workflow.add_edge("stage2_review", "stage3_synthesize")
     workflow.add_edge("stage3_synthesize", END)
@@ -335,18 +431,21 @@ council_graph = build_council_graph()
 
 # ─── Public API ─────────────────────────────────────────────────────────────────
 
-async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
+async def stage1_collect_responses(user_query: str, conversation_history: List[Dict[str, str]] = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """
-    Stage 1: Collect individual responses from all council models.
+    Stage 0 & 1: Dispatch agents and collect individual responses.
 
     Args:
         user_query: The user's question
+        conversation_history: List of previous messages
 
     Returns:
-        List of dicts with member info, thinking, and output
+        Tuple of (stage1_results, dispatch_plan)
     """
-    result = await node_stage1_collect({
+    result = await council_graph.ainvoke({
         "user_query": user_query,
+        "conversation_history": conversation_history or [],
+        "dispatch_plan": {},
         "stage1_results": [],
         "stage2_results": [],
         "stage3_result": {},
@@ -354,21 +453,21 @@ async def stage1_collect_responses(user_query: str) -> List[Dict[str, Any]]:
         "aggregate_rankings": [],
         "errors": [],
     })
-    return result["stage1_results"]
+    return result["stage1_results"], result.get("dispatch_plan", {})
 
 
 async def stage2_collect_rankings(
     user_query: str,
-    stage1_results: List[Dict[str, Any]]
+    stage1_results: List[Dict[str, Any]],
+    conversation_history: List[Dict[str, str]] = None
 ) -> Tuple[List[Dict[str, Any]], Dict[str, str]]:
     """
     Stage 2: Each model ranks the anonymized responses.
-
-    Returns:
-        Tuple of (rankings list, label_to_model mapping)
     """
     result = await node_stage2_review({
         "user_query": user_query,
+        "conversation_history": conversation_history or [],
+        "dispatch_plan": {},
         "stage1_results": stage1_results,
         "stage2_results": [],
         "stage3_result": {},
@@ -382,13 +481,17 @@ async def stage2_collect_rankings(
 async def stage3_synthesize_final(
     user_query: str,
     stage1_results: List[Dict[str, Any]],
-    stage2_results: List[Dict[str, Any]]
+    stage2_results: List[Dict[str, Any]],
+    dispatch_plan: Dict[str, Any] = None,
+    conversation_history: List[Dict[str, str]] = None
 ) -> Dict[str, Any]:
     """
     Stage 3: CIO synthesizes final investment thesis.
     """
     result = await node_stage3_synthesize({
         "user_query": user_query,
+        "conversation_history": conversation_history or [],
+        "dispatch_plan": dispatch_plan or {},
         "stage1_results": stage1_results,
         "stage2_results": stage2_results,
         "stage3_result": {},
@@ -399,18 +502,14 @@ async def stage3_synthesize_final(
     return result["stage3_result"]
 
 
-async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
+async def run_full_council(user_query: str, conversation_history: List[Dict[str, str]] = None) -> Tuple[List, List, Dict, Dict]:
     """
     Run the complete 3-stage council process using LangGraph.
-
-    Args:
-        user_query: The user's question
-
-    Returns:
-        Tuple of (stage1_results, stage2_results, stage3_result, metadata)
     """
     initial_state = {
         "user_query": user_query,
+        "conversation_history": conversation_history or [],
+        "dispatch_plan": {},
         "stage1_results": [],
         "stage2_results": [],
         "stage3_result": {},
@@ -439,6 +538,7 @@ async def run_full_council(user_query: str) -> Tuple[List, List, Dict, Dict]:
     metadata = {
         "label_to_model": final_state.get("label_to_model", {}),
         "aggregate_rankings": final_state.get("aggregate_rankings", []),
+        "dispatch_plan": final_state.get("dispatch_plan", {})
     }
 
     return stage1_results, stage2_results, stage3_result, metadata
