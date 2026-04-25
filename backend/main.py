@@ -1,4 +1,4 @@
-"""FastAPI backend for MakeMeRichGPT — Finance LLM Council."""
+"""FastAPI backend for CouncilGPT — Multi-Agent Expert Council."""
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 
 from . import storage
+from .settings_manager import load_settings, save_settings
 from .council import (
     run_full_council,
     generate_conversation_title,
@@ -22,12 +23,12 @@ from .council import (
     stage3_synthesize_final,
     calculate_aggregate_rankings,
 )
-from .config import COUNCIL_MEMBERS, CHAIRMAN_MODEL
+from .config import TITLE_GEN_MODEL
 from .web_scraper import scrape_url, search_web, detect_urls, detect_search_intent
 from .documents import process_upload, get_upload_history, search_upload_memory
 from .image_gen import generate_image, is_image_generation_available
 
-app = FastAPI(title="MakeMeRichGPT API")
+app = FastAPI(title="CouncilGPT API")
 
 # Enable CORS for local development and production
 app.add_middleware(
@@ -95,14 +96,15 @@ class Conversation(BaseModel):
 @app.get("/")
 async def root():
     """Health check endpoint."""
-    return {"status": "ok", "service": "MakeMeRichGPT API"}
+    return {"status": "ok", "service": "CouncilGPT API"}
 
 
 @app.get("/api/council/members")
 async def get_council_members():
     """Get info about all council members."""
+    settings = load_settings()
     members = []
-    for member in COUNCIL_MEMBERS:
+    for member in settings.get("members", []):
         members.append({
             "id": member["id"],
             "model": member["model"],
@@ -112,12 +114,27 @@ async def get_council_members():
     return {
         "members": members,
         "chairman": {
-            "model": CHAIRMAN_MODEL,
+            "model": settings.get("chairman_model", "llama-3.3-70b-versatile"),
             "display_name": "Chairman",
         },
         "total": len(members),
         "image_gen_available": is_image_generation_available(),
     }
+
+
+# ─── Settings Endpoints ─────────────────────────────────────────────────────
+
+@app.get("/api/settings/council")
+async def get_settings():
+    """Get the current council configuration."""
+    return load_settings()
+
+@app.put("/api/settings/council")
+async def update_settings(request: dict):
+    """Update the council configuration."""
+    if save_settings(request):
+        return {"status": "ok"}
+    raise HTTPException(status_code=500, detail="Failed to save settings")
 
 
 # ─── Usage / Credits Endpoints ──────────────────────────────────────────────
@@ -330,7 +347,7 @@ async def send_message(conversation_id: str, request: SendMessageRequest):
     # Run the 3-stage council process via LangGraph
     stage1_results, stage2_results, stage3_result, metadata = await run_full_council(
         request.content,
-        conversation_history=history
+        conversation_history=history,
     )
 
     # Add assistant message with all stages
@@ -457,7 +474,10 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             # Stage 1: Collect responses (and dispatch)
             stage1_start = time.time()
             yield f"data: {json.dumps({'type': 'stage1_start', 'data': {'timestamp': stage1_start}})}\n\n"
-            stage1_results, dispatch_plan = await stage1_collect_responses(augmented_content, conversation_history=history)
+            stage1_results, dispatch_plan = await stage1_collect_responses(
+                augmented_content, 
+                conversation_history=history,
+            )
 
             # Count actual tokens from stage 1
             stage1_tokens = _sum_tokens(stage1_results)

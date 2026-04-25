@@ -6,12 +6,12 @@ import Stage3 from './Stage3';
 import './ChatInterface.css';
 
 const SUGGESTED_PROMPTS = [
-  { text: 'Should I buy NVIDIA at current levels?' },
-  { text: 'Best options strategy for earnings season?' },
-  { text: 'How will Fed rate cuts impact my portfolio?' },
-  { text: 'Is Bitcoin a good hedge against inflation?' },
-  { text: 'Best growth ETFs for a 10-year horizon?' },
-  { text: 'How to hedge my tech-heavy portfolio?' },
+  { text: 'How should I structure my software engineering team?' },
+  { text: 'Analyze the ethical implications of AI in healthcare.' },
+  { text: 'What is the most plausible solution to the Fermi Paradox?' },
+  { text: 'Design a 5-day workout split for hypertrophy.' },
+  { text: 'How can we solve the housing affordability crisis?' },
+  { text: 'Explain the difference between Keynesian and Austrian economics.' },
 ];
 
 function formatDuration(seconds) {
@@ -259,11 +259,11 @@ export default function ChatInterface({
                 <path d="M2 12l10 5 10-5" />
               </svg>
             </div>
-            <h1 className="welcome-title">MakeMeRichGPT</h1>
+            <h1 className="welcome-title">CouncilGPT</h1>
             <p className="welcome-subtitle">
-              Financial Deliberation Council
+              Multi-Agent Expert Council
               <br />
-              10 AI models analyze your queries through a 3-stage LangGraph pipeline.
+              AI models analyze your queries through a 3-stage deliberation pipeline.
             </p>
 
             {councilMembers && councilMembers.length > 0 && (
@@ -299,7 +299,7 @@ export default function ChatInterface({
               </svg>
             </div>
             <h2>Start a Session</h2>
-            <p>Submit a financial query to the deliberation council</p>
+            <p>Submit a query to the expert council</p>
 
             <div className="suggestions-grid">
               {SUGGESTED_PROMPTS.map((prompt, i) => (
@@ -535,7 +535,7 @@ export default function ChatInterface({
 
           <textarea
             className="message-input"
-            placeholder={isLoading ? 'Council is deliberating...' : 'Enter your financial query... (Enter to submit)'}
+            placeholder={isLoading ? 'Council is deliberating...' : 'Enter your query... (Enter to submit)'}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -544,7 +544,6 @@ export default function ChatInterface({
             id="message-input"
           />
 
-          {/* Image mode toggle — with text label */}
           <button
             type="button"
             className={`image-mode-toggle-btn ${imageMode ? 'active' : ''}`}

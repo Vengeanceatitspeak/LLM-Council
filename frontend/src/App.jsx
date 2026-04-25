@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatInterface from './components/ChatInterface';
+import CouncilSettings from './components/CouncilSettings';
 import { api } from './api';
 import './App.css';
 
@@ -19,6 +20,7 @@ function App() {
   const [thinkingTimer, setThinkingTimer] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Load conversations, usage, and council members on mount
   useEffect(() => {
@@ -397,8 +399,6 @@ function App() {
               messages[messages.length - 1] = lastMsg;
               return { ...prev, messages };
             });
-            loadConversations();
-            loadUsage();
             setIsLoading(false);
             setTimerActive(false);
             break;
@@ -437,6 +437,7 @@ function App() {
         onRenameConversation={handleRenameConversation}
         onDeleteConversation={handleDeleteConversation}
         usage={usage}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
       <ChatInterface
         conversation={currentConversation}
@@ -450,6 +451,14 @@ function App() {
         onFileUpload={handleFileUpload}
         uploadedFiles={uploadedFiles}
         onRemoveFile={handleRemoveFile}
+      />
+      
+      <CouncilSettings 
+        isOpen={isSettingsOpen} 
+        onClose={() => {
+          setIsSettingsOpen(false);
+          loadCouncilMembers(); // Reload members after settings change
+        }} 
       />
     </div>
   );

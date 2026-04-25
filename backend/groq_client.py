@@ -68,21 +68,24 @@ async def query_groq_models_parallel(
     system_prompt: Optional[str] = None,
 ) -> Dict[str, Optional[Dict[str, Any]]]:
     """
-    Query multiple Groq models in parallel, each with their own API key.
+    Query multiple Groq models in parallel.
 
     Args:
-        members: List of council member dicts (each has 'api_key', 'model', 'id')
+        members: List of council member dicts (each has 'model', 'id', optionally 'api_key')
         messages: List of message dicts to send to each model
         system_prompt: Optional system prompt for all models
 
     Returns:
         Dict mapping member_id to response dict (or None if failed)
     """
+    import os
+    global_key = os.getenv("GROQ_API_KEY", "")
+
     tasks = []
     for member in members:
         tasks.append(
             query_groq_model(
-                api_key=member["api_key"],
+                api_key=member.get("api_key") or global_key,
                 model=member["model"],
                 messages=messages,
                 system_prompt=system_prompt,

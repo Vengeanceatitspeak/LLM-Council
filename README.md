@@ -1,4 +1,4 @@
-# LLM Council — MakeMeRichGPT
+# LLM Council — CouncilGPT
 
 ![llmcouncil](header.jpg)
 

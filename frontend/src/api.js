@@ -1,5 +1,5 @@
 /**
- * API client for MakeMeRichGPT backend.
+ * API client for CouncilGPT backend.
  */
 
 const API_BASE = 'http://localhost:8001';

@@ -1,4 +1,4 @@
-"""Document upload and text extraction module for MakeMeRichGPT.
+"""Document upload and text extraction module for CouncilGPT.
 
 Handles PDF text extraction, image OCR, and file memory.
 

@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# MakeMeRichGPT - Start script
+# CouncilGPT - Start script
 
 # Add uv and fnm to path
 source $HOME/.local/bin/env
 export PATH="/home/vengeance/.local/share/fnm:$PATH"
 eval "$(fnm env)"
 
-echo "Starting MakeMeRichGPT..."
+echo "Starting CouncilGPT..."
 echo ""
 
 # Start backend
@@ -25,7 +25,7 @@ npm run dev &
 FRONTEND_PID=$!
 
 echo ""
-echo "✓ MakeMeRichGPT is running!"
+echo "✓ CouncilGPT is running!"
 echo "  Backend:  http://localhost:8001"
 echo "  Frontend: http://localhost:5173"
 echo ""

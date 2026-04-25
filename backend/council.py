@@ -1,4 +1,4 @@
-"""LangGraph-based Council orchestration for MakeMeRichGPT.
+"""LangGraph-based Council orchestration for CouncilGPT.
 
 Uses LangGraph StateGraph to build a multi-stage deliberation pipeline:
   1. Chairman analyzes query and dispatches to agents
@@ -17,16 +17,11 @@ from typing import List, Dict, Any, Tuple, Optional, TypedDict, Annotated
 from langgraph.graph import StateGraph, END
 
 from .groq_client import query_groq_model, query_groq_models_parallel
+from .settings_manager import load_settings
 from .config import (
-    COUNCIL_MEMBERS,
-    CHAIRMAN_API_KEY,
-    CHAIRMAN_MODEL,
-    CHAIRMAN_SYSTEM_PROMPT,
-    AGENT_SYSTEM_PROMPT_TEMPLATE,
-    CIO_SYNTHESIS_PROMPT,
-    TITLE_GEN_API_KEY,
     TITLE_GEN_MODEL,
 )
+import os
 
 
 # ─── State Definition ──────────────────────────────────────────────────────────
@@ -42,6 +37,7 @@ class CouncilState(TypedDict):
     label_to_model: Dict[str, str]
     aggregate_rankings: List[Dict[str, Any]]
     errors: List[str]
+    agent_count: int
 
 
 # ─── Thinking Parser ───────────────────────────────────────────────────────────
@@ -122,11 +118,23 @@ async def node_stage0_dispatch(state: CouncilState) -> dict:
     # Prepend history if available
     messages = conversation_history + [{"role": "user", "content": user_query}]
 
+    settings = load_settings()
+    members_list = settings.get("members", [])
+    agent_count = len(members_list)
+    chairman_prompt = settings.get("chairman_prompt", "")
+    chairman_model = settings.get("chairman_model", "llama-3.3-70b-versatile")
+    chairman_api_key = os.getenv("GROQ_API_KEY", "")
+    
+    # Dynamically inject the agent count into the prompt
+    system_prompt = chairman_prompt.replace(
+        "{agent_count}", str(agent_count)
+    )
+
     response = await query_groq_model(
-        api_key=CHAIRMAN_API_KEY,
-        model=CHAIRMAN_MODEL,
+        api_key=chairman_api_key,
+        model=chairman_model,
         messages=messages,
-        system_prompt=CHAIRMAN_SYSTEM_PROMPT,
+        system_prompt=system_prompt,
     )
     
     dispatch_plan = {}
@@ -166,32 +174,42 @@ async def node_stage1_collect(state: CouncilState) -> dict:
     # If chairman failed, fallback to querying a few default agents
     if not tasks:
         tasks = [
-            {"agent_id": "member_1", "assigned_role": "Analyst", "task": "General analysis", "output_format": "Standard", "constraints": "None"},
-            {"agent_id": "member_2", "assigned_role": "Risk Manager", "task": "Risk analysis", "output_format": "Standard", "constraints": "None"}
+            {"agent_id": i + 1, "assigned_role": m.get("role", "Analyst"), "task": "General analysis", "output_format": "Standard", "constraints": "None"}
+            for i, m in enumerate(members_list)
         ]
 
     # Map member IDs and create dynamic system prompts
     selected_members = []
     member_prompts = {}
     
-    for t in tasks:
-        agent_id_raw = t.get("agent_id")
-        member_id = f"member_{agent_id_raw}" if str(agent_id_raw).isdigit() else str(agent_id_raw)
-        
-        member = next((m for m in COUNCIL_MEMBERS if m["id"] == member_id), None)
+    settings = load_settings()
+    members_list = settings.get("members", [])
+    default_model = settings.get("default_model", "llama-3.3-70b-versatile")
+    agent_count = len(members_list)
+    
+    # Match tasks to agents by index (agents are stateless slots)
+    for i, t in enumerate(tasks):
+        member = members_list[i % len(members_list)] if members_list else None
         if member:
+            # Ensure model is set (fall back to default)
+            if not member.get("model"):
+                member["model"] = default_model
             selected_members.append(member)
-            dynamic_prompt = AGENT_SYSTEM_PROMPT_TEMPLATE + f"\n\n[YOUR SPECIFIC ASSIGNMENT]\nROLE: {t.get('assigned_role')}\nTASK: {t.get('task')}\nOUTPUT FORMAT: {t.get('output_format')}\nCONSTRAINTS: {t.get('constraints')}"
-            member_prompts[member_id] = dynamic_prompt
+            agent_prompt = member.get("system_prompt", "")
+            dynamic_prompt = agent_prompt + f"\n\n[YOUR SPECIFIC ASSIGNMENT]\nROLE: {t.get('assigned_role')}\nTASK: {t.get('task')}\nOUTPUT FORMAT: {t.get('output_format')}\nCONSTRAINTS: {t.get('constraints')}"
+            member_prompts[member["id"]] = dynamic_prompt
             
-    if not selected_members:
-        selected_members = [COUNCIL_MEMBERS[0]]
-        member_prompts[COUNCIL_MEMBERS[0]["id"]] = AGENT_SYSTEM_PROMPT_TEMPLATE
+    if not selected_members and members_list:
+        selected_members = [members_list[0]]
+        if not selected_members[0].get("model"):
+            selected_members[0]["model"] = default_model
+        member_prompts[members_list[0]["id"]] = members_list[0].get("system_prompt", "")
 
     # Query dispatched members in parallel, each with their own dynamic system prompt
+    global_api_key = os.getenv("GROQ_API_KEY", "")
     tasks_coros = [
         query_groq_model(
-            api_key=member["api_key"],
+            api_key=member.get("api_key") or global_api_key,
             model=member["model"],
             messages=messages,
             system_prompt=member_prompts[member["id"]]
@@ -215,8 +233,8 @@ async def node_stage1_collect(state: CouncilState) -> dict:
             stage1_results.append({
                 "member_id": member["id"],
                 "model": member["model"],
-                "display_name": member["display_name"],
-                "color": member["color"],
+                "display_name": member.get("role", member.get("display_name", member["id"])),
+                "color": member.get("color", "#3b82f6"),
                 "thinking": parsed["thinking"],
                 "output": parsed["output"],
                 "response": response["content"],
@@ -257,21 +275,20 @@ async def node_stage2_review(state: CouncilState) -> dict:
         for label, result in zip(labels, stage1_results)
     ])
 
-    ranking_prompt = f"""You are a senior portfolio manager evaluating different financial analyses for the following question:
+    ranking_prompt = f"""You are a senior reviewer evaluating different analyses for the following question:
 
 Question: {user_query}
 
-Here are the responses from different analysts (anonymized):
+Here are the responses from different experts (anonymized):
 
 {responses_text}
 
 Your task:
-1. Evaluate each response on these FINANCE-SPECIFIC criteria:
-   - **Accuracy**: Are the financial concepts, data, and reasoning correct?
-   - **Actionability**: Does it provide specific, tradeable insights (entry/exit, targets, sizing)?
-   - **Risk Awareness**: Does it address downside risks, stop-losses, or hedging?
+1. Evaluate each response on these criteria:
+   - **Accuracy**: Are the concepts, data, and reasoning correct?
    - **Depth**: Is the analysis thorough with supporting evidence?
-   - **Clarity**: Is it well-structured and easy to act upon?
+   - **Clarity**: Is it well-structured and easy to understand?
+   - **Actionability**: Does it provide specific, useful insights or recommendations?
 
 2. Then, at the very end, provide a final ranking.
 
@@ -283,8 +300,8 @@ IMPORTANT: Your final ranking MUST be formatted EXACTLY as follows:
 
 Example of the correct format:
 
-Response A provides solid fundamental analysis with specific price targets...
-Response B offers good macro perspective but lacks actionable trade setups...
+Response A provides solid fundamental analysis...
+Response B offers good perspective but lacks actionable steps...
 
 FINAL RANKING:
 1. Response C
@@ -295,12 +312,15 @@ Now provide your evaluation and ranking:"""
 
     messages = conversation_history + [{"role": "user", "content": ranking_prompt}]
 
+    settings = load_settings()
+    members_list = settings.get("members", [])
+
     # Identify which members actually participated in stage 1
     participated_ids = {r["member_id"] for r in stage1_results}
-    selected_members = [m for m in COUNCIL_MEMBERS if m["id"] in participated_ids]
+    selected_members = [m for m in members_list if m["id"] in participated_ids]
     
     if not selected_members:
-        selected_members = COUNCIL_MEMBERS
+        selected_members = members_list
 
     # Get rankings from the selected council members in parallel
     responses = await query_groq_models_parallel(selected_members, messages)
@@ -315,7 +335,7 @@ Now provide your evaluation and ranking:"""
             stage2_results.append({
                 "member_id": member["id"],
                 "model": member["model"],
-                "display_name": member["display_name"],
+                "display_name": member.get("role", member.get("display_name", member["id"])),
                 "ranking": full_text,
                 "parsed_ranking": parsed,
                 "tokens": usage,
@@ -352,9 +372,9 @@ async def node_stage3_synthesize(state: CouncilState) -> dict:
         for result in stage2_results
     ])
     
-    synthesis_instruction = dispatch_plan.get("synthesis_instruction", "Be decisive. Your investors are paying for alpha, not hedged language.")
+    synthesis_instruction = dispatch_plan.get("synthesis_instruction", "Be decisive. Your output should be clear and actionable.")
 
-    chairman_prompt = f"""Your council of financial AI models has analyzed the following question and peer-reviewed each other's work.
+    chairman_prompt = f"""Your multi-agent expert council has analyzed the following question and peer-reviewed each other's work.
 
 Original Question: {user_query}
 
@@ -364,23 +384,31 @@ STAGE 1 — Individual Analyses:
 STAGE 2 — Peer Rankings & Evaluations:
 {stage2_text}
 
-As CIO, synthesize all perspectives into a DEFINITIVE investment thesis.
+As Lead Synthesizer, synthesize all perspectives into a DEFINITIVE conclusion.
 {synthesis_instruction}"""
 
     messages = conversation_history + [{"role": "user", "content": chairman_prompt}]
 
+    settings = load_settings()
+    agent_count = len(settings.get("members", []))
+    synthesizer_prompt = settings.get("synthesizer_prompt", "")
+    synthesizer_model = settings.get("synthesizer_model", "llama-3.3-70b-versatile")
+    synthesizer_api_key = os.getenv("GROQ_API_KEY", "")
+
+    system_prompt = synthesizer_prompt
+
     response = await query_groq_model(
-        api_key=CHAIRMAN_API_KEY,
-        model=CHAIRMAN_MODEL,
+        api_key=synthesizer_api_key,
+        model=synthesizer_model,
         messages=messages,
-        system_prompt=CIO_SYNTHESIS_PROMPT,
+        system_prompt=system_prompt,
     )
 
     if response is None or not response.get("content"):
         return {
             "stage3_result": {
-                "model": CHAIRMAN_MODEL,
-                "display_name": "Chairman",
+                "model": synthesizer_model,
+                "display_name": "Lead Synthesizer",
                 "thinking": "",
                 "output": "Error: Unable to generate final synthesis.",
                 "response": "Error: Unable to generate final synthesis.",
@@ -393,8 +421,8 @@ As CIO, synthesize all perspectives into a DEFINITIVE investment thesis.
 
     return {
         "stage3_result": {
-            "model": CHAIRMAN_MODEL,
-            "display_name": "Chairman",
+            "model": synthesizer_model,
+            "display_name": "Lead Synthesizer",
             "thinking": parsed["thinking"],
             "output": parsed["output"],
             "response": response["content"],
@@ -431,7 +459,7 @@ council_graph = build_council_graph()
 
 # ─── Public API ─────────────────────────────────────────────────────────────────
 
-async def stage1_collect_responses(user_query: str, conversation_history: List[Dict[str, str]] = None) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+async def stage1_collect_responses(user_query: str, conversation_history: List[Dict[str, str]] = None, agent_count: int = 10) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """
     Stage 0 & 1: Dispatch agents and collect individual responses.
 
@@ -452,6 +480,7 @@ async def stage1_collect_responses(user_query: str, conversation_history: List[D
         "label_to_model": {},
         "aggregate_rankings": [],
         "errors": [],
+        "agent_count": agent_count,
     })
     return result["stage1_results"], result.get("dispatch_plan", {})
 
@@ -502,7 +531,7 @@ async def stage3_synthesize_final(
     return result["stage3_result"]
 
 
-async def run_full_council(user_query: str, conversation_history: List[Dict[str, str]] = None) -> Tuple[List, List, Dict, Dict]:
+async def run_full_council(user_query: str, conversation_history: List[Dict[str, str]] = None, agent_count: int = 10) -> Tuple[List, List, Dict, Dict]:
     """
     Run the complete 3-stage council process using LangGraph.
     """
@@ -516,6 +545,7 @@ async def run_full_council(user_query: str, conversation_history: List[Dict[str,
         "label_to_model": {},
         "aggregate_rankings": [],
         "errors": [],
+        "agent_count": agent_count,
     }
 
     # Run the graph
@@ -586,8 +616,10 @@ def calculate_aggregate_rankings(
                 model_name = label_to_model[label]
                 model_positions[model_name].append(position)
 
+    settings = load_settings()
+    members_list = settings.get("members", [])
     # Build member lookup
-    member_lookup = {m["display_name"]: m for m in COUNCIL_MEMBERS}
+    member_lookup = {m["display_name"]: m for m in members_list}
 
     aggregate = []
     for model, positions in model_positions.items():
@@ -611,15 +643,15 @@ async def generate_conversation_title(user_query: str) -> str:
     """
     title_prompt = (
         "Generate a very short title (3-5 words maximum) that summarizes "
-        "the following financial question. The title should be concise, "
-        "descriptive, and finance-related. Do not use quotes or punctuation.\n\n"
+        "the following question. The title should be concise, "
+        "descriptive, and relevant. Do not use quotes or punctuation.\n\n"
         f"Question: {user_query}\n\nTitle:"
     )
 
     messages = [{"role": "user", "content": title_prompt}]
 
     response = await query_groq_model(
-        api_key=TITLE_GEN_API_KEY,
+        api_key=os.getenv("GROQ_API_KEY", ""),
         model=TITLE_GEN_MODEL,
         messages=messages,
         timeout=30.0,

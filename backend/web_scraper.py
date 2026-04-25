@@ -1,4 +1,4 @@
-"""Web scraping and search module for MakeMeRichGPT.
+"""Web scraping and search module for CouncilGPT.
 
 Provides URL scraping and DuckDuckGo search capabilities.
 Expanded search intent detection so the system automatically triggers

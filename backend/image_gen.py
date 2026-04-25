@@ -1,4 +1,4 @@
-"""Cloudflare Workers AI image generation module for MakeMeRichGPT.
+"""Cloudflare Workers AI image generation module for CouncilGPT.
 
 Uses the Cloudflare Workers AI REST API to generate images
 via the FLUX.1 [schnell] model (fast, free tier).

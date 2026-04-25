@@ -1,4 +1,4 @@
-/* ─── MakeMeRichGPT — Sidebar (Professional Finance) ───────────────────────── */
+/* ─── CouncilGPT — Sidebar (Professional Finance) ───────────────────────── */
 
 .sidebar {
   width: 300px;
@@ -332,4 +332,24 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
   font-weight: 500;
+}
+
+.settings-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.settings-btn:hover {
+  background: var(--bg-surface-3);
+  color: var(--text-primary);
+  border-color: var(--text-secondary);
 }
