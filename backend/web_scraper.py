@@ -1,6 +1,8 @@
 """Web scraping and search module for MakeMeRichGPT.
 
 Provides URL scraping and DuckDuckGo search capabilities.
+Expanded search intent detection so the system automatically triggers
+web search for financial queries about current events, prices, etc.
 """
 
 import re
@@ -8,6 +10,7 @@ import httpx
 from bs4 import BeautifulSoup
 from typing import Optional, List, Dict
 from duckduckgo_search import DDGS
+import traceback
 
 
 async def scrape_url(url: str, timeout: float = 15.0) -> Optional[Dict[str, str]]:
@@ -56,7 +59,8 @@ async def scrape_url(url: str, timeout: float = 15.0) -> Optional[Dict[str, str]
         }
 
     except Exception as e:
-        print(f"Error scraping {url}: {e}")
+        print(f"[WEB_SCRAPER] Error scraping {url}: {e}")
+        traceback.print_exc()
         return None
 
 
@@ -79,7 +83,8 @@ def search_web(query: str, max_results: int = 5) -> List[Dict[str, str]]:
                 for r in results
             ]
     except Exception as e:
-        print(f"Error searching web: {e}")
+        print(f"[WEB_SCRAPER] Error searching web: {e}")
+        traceback.print_exc()
         return []
 
 
@@ -93,12 +98,75 @@ def detect_urls(text: str) -> List[str]:
 
 
 def detect_search_intent(text: str) -> bool:
-    """Detect if the user wants a web search."""
-    search_triggers = [
+    """
+    Detect if the user's query would benefit from a live web search.
+
+    This is the KEY function that determines whether the web scraper fires.
+    It must be aggressive enough to catch financial queries about current
+    events, prices, news, etc. — otherwise the LLM will respond with
+    "I don't have access to real-time data."
+    """
+    text_lower = text.lower()
+
+    # ─── Exact trigger phrases (high confidence) ────────────────────────
+    exact_triggers = [
         "search for", "google", "look up", "find out",
         "what's happening", "latest news", "current price",
         "today's", "right now", "live data", "real-time",
-        "search the web", "web search",
+        "search the web", "web search", "look online",
+        "check online", "find online",
     ]
-    text_lower = text.lower()
-    return any(trigger in text_lower for trigger in search_triggers)
+    if any(trigger in text_lower for trigger in exact_triggers):
+        return True
+
+    # ─── Financial current-event signals ────────────────────────────────
+    # These indicate the user is asking about something that needs live data
+    financial_signals = [
+        # Price/market state queries
+        "price of", "stock price", "share price", "market cap",
+        "trading at", "currently trading", "what is .* trading",
+        "how much is", "what's .* worth",
+        # News / events
+        "recent", "latest", "news about", "headlines",
+        "just announced", "breaking", "update on",
+        "earnings report", "quarterly results", "annual report",
+        "ipo", "merger", "acquisition", "buyout",
+        # Temporal markers that imply current data
+        "today", "this week", "this month", "this quarter",
+        "this year", "yesterday", "last week", "last month",
+        "now", "currently", "at the moment", "right now",
+        "as of", "2024", "2025", "2026",
+        # Analyst / sentiment queries
+        "analyst rating", "analyst target", "consensus",
+        "sentiment", "what do analysts", "wall street",
+        # Specific market data
+        "s&p 500", "nasdaq", "dow jones", "nifty", "sensex",
+        "bitcoin price", "btc price", "eth price", "crypto",
+        "gold price", "oil price", "treasury yield",
+        "interest rate", "fed rate", "rbi rate", "ecb rate",
+        "inflation rate", "gdp growth", "unemployment",
+        "forex", "usd/inr", "eur/usd",
+    ]
+
+    for signal in financial_signals:
+        if re.search(signal, text_lower):
+            return True
+
+    # ─── Ticker symbol detection (e.g., $AAPL, TSLA, NVDA) ─────────────
+    ticker_pattern = re.compile(r'\$?[A-Z]{2,5}\b')
+    tickers = ticker_pattern.findall(text)
+    # Filter common English words that look like tickers
+    non_tickers = {
+        "I", "A", "THE", "AND", "FOR", "WITH", "THIS", "THAT", "FROM",
+        "WHAT", "WHEN", "HOW", "WHY", "WHO", "ARE", "CAN", "WILL",
+        "SHOULD", "WOULD", "COULD", "NOT", "BUT", "ALL", "ALSO",
+        "BEEN", "HAVE", "HAS", "HAD", "ITS", "MAY", "OUR", "NEW",
+        "NOW", "USE", "GET", "LET", "PUT", "SET", "TOP", "TWO",
+        "BIG", "BUY", "LOW", "HIGH", "SELL", "ETF", "GDP", "FED",
+        "CEO", "CFO", "CIO", "IPO", "ESG", "AI",
+    }
+    real_tickers = [t.lstrip('$') for t in tickers if t.lstrip('$') not in non_tickers]
+    if real_tickers:
+        return True
+
+    return False

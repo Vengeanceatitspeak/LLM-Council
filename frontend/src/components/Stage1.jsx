@@ -3,7 +3,7 @@ import MarkdownRenderer from './MarkdownRenderer';
 import './Stage1.css';
 
 function ThinkingBlock({ thinking }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   if (!thinking) return null;
 

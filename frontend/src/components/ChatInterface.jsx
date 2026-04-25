@@ -364,44 +364,87 @@ export default function ChatInterface({
                       )}
                     </div>
 
-                    {/* Web Scrape indicator */}
+                    {/* Web Scrape indicator — step-by-step display */}
                     {msg.loading?.webScrape && (
-                      <div className="web-indicator">
-                        <div className="web-indicator-spinner" />
-                        <span>Scraping {msg.webScrapeData?.urls?.length || 0} URL{msg.webScrapeData?.urls?.length !== 1 ? 's' : ''}...</span>
+                      <div className="tool-step-card">
+                        <div className="tool-step-header">
+                          <div className="tool-step-spinner" />
+                          <span className="tool-step-title">Scraping web pages</span>
+                        </div>
+                        <div className="tool-step-details">
+                          {(msg.webScrapeData?.urls || []).map((url, i) => (
+                            <div key={i} className="tool-step-item">
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <line x1="2" y1="12" x2="22" y2="12" />
+                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                              </svg>
+                              <span className="tool-step-url">{url.length > 60 ? url.substring(0, 60) + '...' : url}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                     {msg.webScrapeData && !msg.loading?.webScrape && (
-                      <div className="web-indicator done">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        <span>Scraped {msg.webScrapeData?.urls?.length || 0} page(s) {msg.webScrapeData.duration_sec ? `in ${msg.webScrapeData.duration_sec}s` : ''}</span>
+                      <div className="tool-step-card completed">
+                        <div className="tool-step-header">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          <span className="tool-step-title">Scraped {msg.webScrapeData?.urls?.length || 0} page(s)</span>
+                          {msg.webScrapeData.duration_sec && <span className="tool-step-duration">{msg.webScrapeData.duration_sec}s</span>}
+                        </div>
                       </div>
                     )}
 
-                    {/* Web Search indicator */}
+                    {/* Web Search indicator — step-by-step display */}
                     {msg.loading?.webSearch && (
-                      <div className="web-indicator">
-                        <div className="web-indicator-spinner" />
-                        <span>Searching the web...</span>
+                      <div className="tool-step-card">
+                        <div className="tool-step-header">
+                          <div className="tool-step-spinner" />
+                          <span className="tool-step-title">Searching the web for real-time data</span>
+                        </div>
+                        <div className="tool-step-details">
+                          <div className="tool-step-item">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <circle cx="11" cy="11" r="8" />
+                              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <span className="tool-step-url">Querying DuckDuckGo...</span>
+                          </div>
+                        </div>
                       </div>
                     )}
                     {msg.webSearchData && !msg.loading?.webSearch && (
-                      <div className="web-indicator done">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <circle cx="11" cy="11" r="8" />
-                          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                        </svg>
-                        <span>Found {msg.webSearchData.count} results {msg.webSearchData.duration_sec ? `in ${msg.webSearchData.duration_sec}s` : ''}</span>
+                      <div className="tool-step-card completed">
+                        <div className="tool-step-header">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                          </svg>
+                          <span className="tool-step-title">Found {msg.webSearchData.count} results</span>
+                          {msg.webSearchData.duration_sec && <span className="tool-step-duration">{msg.webSearchData.duration_sec}s</span>}
+                        </div>
                       </div>
                     )}
 
-                    {/* Image Generation */}
+                    {/* Image Generation indicator */}
                     {msg.loading?.imageGen && (
-                      <div className="web-indicator image-gen-loading">
-                        <div className="web-indicator-spinner" />
-                        <span>Generating image...</span>
+                      <div className="tool-step-card image-gen">
+                        <div className="tool-step-header">
+                          <div className="tool-step-spinner" />
+                          <span className="tool-step-title">Generating image via Cloudflare AI</span>
+                        </div>
+                        <div className="tool-step-details">
+                          <div className="tool-step-item">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                              <circle cx="8.5" cy="8.5" r="1.5" />
+                              <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            <span className="tool-step-url">Running FLUX.1 [schnell] model...</span>
+                          </div>
+                        </div>
                       </div>
                     )}
                     {msg.generatedImage && <GeneratedImage imageData={msg.generatedImage} />}
@@ -501,20 +544,21 @@ export default function ChatInterface({
             id="message-input"
           />
 
-          {/* Image mode toggle */}
+          {/* Image mode toggle — with text label */}
           <button
             type="button"
-            className={`input-action-btn image-mode-btn ${imageMode ? 'active' : ''}`}
+            className={`image-mode-toggle-btn ${imageMode ? 'active' : ''}`}
             onClick={onToggleImageMode}
             title={imageMode ? 'Image mode ON — will generate an image with response' : 'Enable image generation'}
             disabled={isLoading}
             id="image-mode-toggle"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
               <circle cx="8.5" cy="8.5" r="1.5" />
               <polyline points="21 15 16 10 5 21" />
             </svg>
+            <span className="image-mode-label">Create image</span>
           </button>
 
           <button

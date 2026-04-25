@@ -377,7 +377,7 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 for url in urls[:3]:  # Limit to 3 URLs
                     scraped = await scrape_url(url)
                     if scraped:
-                        web_context += f"\n\n--- Scraped from {scraped['title']} ({url}) ---\n{scraped['text']}\n"
+                        web_context += f"\n\n[LIVE WEB DATA — scraped from: {scraped['title']} ({url})]:\n{scraped['text']}\n"
                 scrape_duration = round(time.time() - scrape_start, 2)
                 yield f"data: {json.dumps({'type': 'web_scrape_complete', 'data': {'duration_sec': scrape_duration}})}\n\n"
 
@@ -387,9 +387,9 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
                 yield f"data: {json.dumps({'type': 'web_search_start'})}\n\n"
                 results = search_web(request.content, max_results=5)
                 if results:
-                    web_context = "\n\n--- Web Search Results ---\n"
+                    web_context = "\n\n[LIVE WEB SEARCH RESULTS — fetched just now]:\n"
                     for r in results:
-                        web_context += f"- **{r['title']}**: {r['body']} ({r['href']})\n"
+                        web_context += f"- {r['title']}: {r['body']} (Source: {r['href']})\n"
                 search_duration = round(time.time() - search_start, 2)
                 yield f"data: {json.dumps({'type': 'web_search_complete', 'data': {'count': len(results), 'duration_sec': search_duration}})}\n\n"
 
@@ -397,13 +397,13 @@ async def send_message_stream(conversation_id: str, request: SendMessageRequest)
             upload_context = ""
             uploads = get_upload_history(conversation_id)
             if uploads:
-                upload_context = "\n\n--- Document Context (Uploaded Files) ---\n"
+                upload_context = "\n\n[UPLOADED DOCUMENT DATA — extracted from user's files]:\n"
                 for u in uploads[-5:]:  # Last 5 uploads
-                    upload_context += f"[{u['filename']}]: {u.get('extracted_text', '')[:2000]}\n"
+                    upload_context += f"\n--- File: {u['filename']} ---\n{u.get('extracted_text', '')[:2000]}\n"
 
             # Augment the prompt with web + document context
             if web_context or upload_context:
-                augmented_content = f"{request.content}\n{web_context}{upload_context}"
+                augmented_content = f"{request.content}\n\n=== REAL-TIME DATA (USE THIS — DO NOT SAY YOU LACK ACCESS) ==={web_context}{upload_context}\n=== END REAL-TIME DATA ==="
 
             # ─── Image generation (if image_mode is on) ────────────────────
             if request.image_mode:

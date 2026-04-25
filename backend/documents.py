@@ -1,14 +1,21 @@
 """Document upload and text extraction module for MakeMeRichGPT.
 
 Handles PDF text extraction, image OCR, and file memory.
+
+OCR Strategy:
+- Primary: pytesseract (requires system `tesseract-ocr` package)
+- Fallback: PIL-based image metadata extraction (always available)
+- Text files: direct UTF-8/Latin-1 decoding
+
+All extraction errors are logged with full tracebacks for debugging.
 """
 
 import os
 import io
 import json
-import shutil
+import traceback
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 
 # PDF extraction
@@ -17,14 +24,32 @@ try:
     HAS_PYPDF2 = True
 except ImportError:
     HAS_PYPDF2 = False
+    print("[DOCUMENTS] WARNING: PyPDF2 not installed — PDF extraction disabled")
 
 # Image OCR
 try:
     import pytesseract
     from PIL import Image
     HAS_OCR = True
+
+    # Test if tesseract binary is actually available
+    try:
+        pytesseract.get_tesseract_version()
+    except Exception:
+        HAS_OCR = False
+        print("[DOCUMENTS] WARNING: pytesseract installed but tesseract binary not found — OCR disabled, using PIL fallback")
 except ImportError:
     HAS_OCR = False
+    print("[DOCUMENTS] WARNING: pytesseract not installed — OCR disabled, using PIL fallback")
+
+# PIL for fallback image analysis
+try:
+    from PIL import Image as PILImage
+    from PIL.ExifTags import TAGS
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+    print("[DOCUMENTS] WARNING: Pillow not installed — image analysis disabled")
 
 
 UPLOAD_DIR = "data/uploads"
@@ -39,48 +64,141 @@ def ensure_upload_dir():
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     """Extract text from a PDF file."""
     if not HAS_PYPDF2:
-        return "[PDF extraction unavailable — PyPDF2 not installed]"
+        return "[PDF extraction unavailable — PyPDF2 not installed. Run: pip install PyPDF2]"
 
     try:
+        print(f"[DOCUMENTS] Extracting text from PDF ({len(file_bytes)} bytes)...")
         reader = PdfReader(io.BytesIO(file_bytes))
         text_parts = []
-        for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text_parts.append(page_text.strip())
+        for page_num, page in enumerate(reader.pages):
+            try:
+                page_text = page.extract_text()
+                if page_text:
+                    text_parts.append(page_text.strip())
+                    print(f"[DOCUMENTS]   Page {page_num + 1}: extracted {len(page_text)} chars")
+                else:
+                    print(f"[DOCUMENTS]   Page {page_num + 1}: no extractable text (may be scanned)")
+            except Exception as page_err:
+                print(f"[DOCUMENTS]   Page {page_num + 1}: extraction error — {page_err}")
+                continue
 
         text = "\n\n".join(text_parts)
         if not text.strip():
-            return "[PDF contained no extractable text — may be a scanned document]"
+            return "[PDF contained no extractable text — may be a scanned/image-only PDF. Consider converting to a text-based PDF or uploading as an image for OCR.]"
+
+        print(f"[DOCUMENTS] PDF extraction complete: {len(text)} total chars from {len(reader.pages)} pages")
         return text
+
     except Exception as e:
+        print(f"[DOCUMENTS] PDF extraction FAILED: {e}")
+        traceback.print_exc()
         return f"[Error extracting PDF text: {str(e)}]"
 
 
 def extract_text_from_image(file_bytes: bytes) -> str:
-    """Extract text from an image using OCR."""
-    if not HAS_OCR:
-        return "[OCR unavailable — pytesseract not installed]"
+    """
+    Extract text from an image.
+
+    Strategy:
+    1. Try pytesseract OCR (if tesseract binary is installed)
+    2. Fall back to PIL-based image description (always works)
+    """
+    if not HAS_PIL:
+        return "[Image analysis unavailable — Pillow not installed]"
 
     try:
-        image = Image.open(io.BytesIO(file_bytes))
-        text = pytesseract.image_to_string(image)
-        if not text.strip():
-            return "[No text detected in image]"
-        return text.strip()
+        image = PILImage.open(io.BytesIO(file_bytes))
+        print(f"[DOCUMENTS] Image opened: {image.format} {image.size[0]}x{image.size[1]} {image.mode}")
     except Exception as e:
-        return f"[Error performing OCR: {str(e)}]"
+        print(f"[DOCUMENTS] Failed to open image: {e}")
+        traceback.print_exc()
+        return f"[Error opening image: {str(e)}]"
+
+    # Attempt 1: Tesseract OCR
+    if HAS_OCR:
+        try:
+            print("[DOCUMENTS] Attempting OCR with tesseract...")
+
+            # Preprocess for better OCR: convert to RGB, resize if too small
+            if image.mode in ("RGBA", "P", "LA"):
+                image = image.convert("RGB")
+            elif image.mode == "L":
+                pass  # Grayscale is fine for OCR
+
+            text = pytesseract.image_to_string(image)
+
+            if text and text.strip():
+                print(f"[DOCUMENTS] OCR extracted {len(text.strip())} chars")
+                return text.strip()
+            else:
+                print("[DOCUMENTS] OCR returned empty text — image may not contain text")
+        except Exception as e:
+            print(f"[DOCUMENTS] OCR failed: {e}")
+            traceback.print_exc()
+
+    # Attempt 2: PIL-based image metadata extraction (fallback)
+    try:
+        print("[DOCUMENTS] Using PIL fallback for image analysis...")
+        info_parts = []
+        info_parts.append(f"Image format: {image.format or 'unknown'}")
+        info_parts.append(f"Dimensions: {image.size[0]}x{image.size[1]} pixels")
+        info_parts.append(f"Color mode: {image.mode}")
+
+        # Try to extract EXIF data
+        try:
+            exif_data = image._getexif()
+            if exif_data:
+                for tag_id, value in exif_data.items():
+                    tag_name = TAGS.get(tag_id, tag_id)
+                    if tag_name in ("ImageDescription", "Make", "Model", "DateTime",
+                                    "Software", "Artist", "Copyright", "UserComment"):
+                        info_parts.append(f"{tag_name}: {value}")
+        except Exception:
+            pass
+
+        # Try to get text chunks (PNG)
+        if hasattr(image, "text") and image.text:
+            for key, val in image.text.items():
+                info_parts.append(f"Metadata[{key}]: {val[:500]}")
+
+        # Analyze image content by color distribution
+        try:
+            colors = image.convert("RGB").getcolors(maxcolors=50000)
+            if colors:
+                info_parts.append(f"Unique colors: {len(colors)}")
+                if len(colors) < 20:
+                    info_parts.append("Note: Very few unique colors — this appears to be a simple graphic, chart, or diagram")
+                elif len(colors) > 10000:
+                    info_parts.append("Note: High color complexity — this appears to be a photograph or detailed chart")
+        except Exception:
+            pass
+
+        result = "[Image uploaded — OCR not available. Image metadata:]\n" + "\n".join(info_parts)
+        result += "\n\n[NOTE: To enable full text extraction from images, install tesseract-ocr: sudo apt install tesseract-ocr]"
+
+        print(f"[DOCUMENTS] PIL fallback produced {len(result)} chars of metadata")
+        return result
+
+    except Exception as e:
+        print(f"[DOCUMENTS] PIL fallback also failed: {e}")
+        traceback.print_exc()
+        return f"[Error analyzing image: {str(e)}. Install tesseract-ocr for OCR support.]"
 
 
 def extract_text_from_txt(file_bytes: bytes) -> str:
     """Extract text from a text file."""
     try:
-        return file_bytes.decode("utf-8")
+        text = file_bytes.decode("utf-8")
+        print(f"[DOCUMENTS] Text file decoded (UTF-8): {len(text)} chars")
+        return text
     except UnicodeDecodeError:
         try:
-            return file_bytes.decode("latin-1")
-        except Exception:
-            return "[Error decoding text file]"
+            text = file_bytes.decode("latin-1")
+            print(f"[DOCUMENTS] Text file decoded (Latin-1 fallback): {len(text)} chars")
+            return text
+        except Exception as e:
+            print(f"[DOCUMENTS] Text file decode FAILED: {e}")
+            return "[Error decoding text file — unsupported encoding]"
 
 
 def process_upload(
@@ -101,6 +219,11 @@ def process_upload(
     """
     ensure_upload_dir()
 
+    print(f"\n[DOCUMENTS] ═══════════════════════════════════════════")
+    print(f"[DOCUMENTS] Processing upload: {filename}")
+    print(f"[DOCUMENTS] Size: {len(file_bytes)} bytes ({len(file_bytes) / 1024:.1f} KB)")
+    print(f"[DOCUMENTS] Conversation: {conversation_id}")
+
     # Determine file type
     ext = os.path.splitext(filename)[1].lower()
     file_type = "unknown"
@@ -118,6 +241,11 @@ def process_upload(
     else:
         file_type = "binary"
         extracted_text = f"[Unsupported file type: {ext}]"
+
+    print(f"[DOCUMENTS] File type: {file_type}")
+    print(f"[DOCUMENTS] Extracted text length: {len(extracted_text)} chars")
+    print(f"[DOCUMENTS] First 200 chars: {extracted_text[:200]}...")
+    print(f"[DOCUMENTS] ═══════════════════════════════════════════\n")
 
     # Save the file
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")

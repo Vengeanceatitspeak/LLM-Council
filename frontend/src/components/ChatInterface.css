@@ -350,34 +350,34 @@
   font-weight: 600;
 }
 
-/* ─── Web & Search Indicators ──────────────────────────────────────────────── */
+/* ─── Tool Step Cards (Web Scrape, Search, Image Gen indicators) ───────────── */
 
-.web-indicator {
+.tool-step-card {
+  margin-bottom: 8px;
+  background: var(--bg-card);
+  border: 1px solid rgba(91, 125, 239, 0.15);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  animation: fadeIn 0.3s ease;
+}
+
+.tool-step-card.completed {
+  border-color: rgba(0, 200, 150, 0.15);
+  background: rgba(0, 200, 150, 0.03);
+}
+
+.tool-step-card.image-gen {
+  border-color: rgba(212, 168, 67, 0.15);
+}
+
+.tool-step-header {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(91, 125, 239, 0.06);
-  border: 1px solid rgba(91, 125, 239, 0.12);
-  border-radius: var(--radius-md);
-  margin-bottom: 8px;
-  animation: fadeIn 0.3s ease;
-  font-size: 12px;
-  color: var(--text-secondary);
 }
 
-.web-indicator.done {
-  background: rgba(0, 200, 150, 0.06);
-  border-color: rgba(0, 200, 150, 0.12);
-  color: var(--accent-primary);
-}
-
-.web-indicator.image-gen-loading {
-  background: rgba(212, 168, 67, 0.06);
-  border-color: rgba(212, 168, 67, 0.12);
-}
-
-.web-indicator-spinner {
+.tool-step-spinner {
   width: 14px;
   height: 14px;
   border-radius: 50%;
@@ -385,6 +385,58 @@
   border-top-color: var(--accent-secondary);
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
+}
+
+.tool-step-card.image-gen .tool-step-spinner {
+  border-top-color: var(--accent-gold);
+}
+
+.tool-step-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.tool-step-card.completed .tool-step-title {
+  color: var(--accent-primary);
+}
+
+.tool-step-card.completed svg {
+  color: var(--accent-primary);
+}
+
+.tool-step-duration {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-family: 'JetBrains Mono', monospace;
+  margin-left: auto;
+}
+
+.tool-step-details {
+  padding: 4px 12px 8px 34px;
+}
+
+.tool-step-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.tool-step-item svg {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  opacity: 0.7;
+}
+
+.tool-step-url {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ─── Generated Image ──────────────────────────────────────────────────────── */
@@ -671,26 +723,49 @@
   color: var(--accent-secondary);
 }
 
-/* Image mode toggle */
-.image-mode-btn {
-  position: relative;
+/* Image mode toggle — with text label */
+.image-mode-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+  font-family: inherit;
+  height: 30px;
 }
 
-.image-mode-btn.active {
+.image-mode-toggle-btn:hover:not(:disabled) {
+  color: var(--text-secondary);
+  background: var(--bg-elevated);
+  border-color: var(--border-hover);
+}
+
+.image-mode-toggle-btn.active {
   color: var(--accent-gold);
   background: var(--accent-gold-dim);
+  border-color: rgba(212, 168, 67, 0.3);
 }
 
-.image-mode-btn.active::after {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  background: var(--accent-gold);
-  border-radius: 50%;
+.image-mode-toggle-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.image-mode-label {
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  letter-spacing: 0.1px;
+}
+
+.image-mode-toggle-btn.active .image-mode-label {
+  color: var(--accent-gold);
 }
 
 .send-button {
